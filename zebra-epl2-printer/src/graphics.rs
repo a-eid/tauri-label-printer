@@ -1,6 +1,6 @@
 use image::{ImageBuffer, Luma};
 use rusttype::{Font, Scale, point};
-use ar_reshaper::ArabicReshaper;
+use ar_reshaper::{ArabicReshaper, ReshaperConfig};
 use unicode_bidi::BidiInfo;
 
 /// Render a single Arabic line (tight 1-bit), right-aligned into a minimal-height bitmap.
@@ -14,7 +14,7 @@ pub fn render_arabic_line_1bit(
     let font = Font::try_from_bytes(font_bytes).expect("invalid font");
 
     // 1) Shape & reorder for Arabic (logical -> visual)
-    let reshaper = ArabicReshaper::new();
+    let reshaper = ArabicReshaper::new(ReshaperConfig::default());
     let reshaped = reshaper.reshape(text);
     let bidi = BidiInfo::new(&reshaped, None);
     let para = &bidi.paragraphs[0];
