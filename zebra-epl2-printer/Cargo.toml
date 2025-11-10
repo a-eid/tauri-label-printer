@@ -10,4 +10,4 @@ ar-reshaper = "0.3"
 unicode-bidi = "0.3"
 
 # Win32 printing (used on Windows builds)
-winapi = "0.3"
+winapi = { version = "0.3", features = ["winspool", "minwindef", "ntdef"] }

@@ -33,7 +33,7 @@ pub fn image_to_gw(x: u32, y: u32, img: &GrayImage) -> Vec<u8> {
         }
         if bit_index != 0 {
             // pad remaining bits
-            byte <<= (8 - bit_index);
+            byte <<= 8 - bit_index;
             data.push(byte);
         }
     }
