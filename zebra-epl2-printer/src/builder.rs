@@ -24,21 +24,21 @@ pub fn build_two_product_label(
 
     // assemble EPL job
     let mut out: Vec<u8> = Vec::new();
-    out.extend_from_slice(b"N\nq440\nQ320,24\nD10\n");
+    out.extend_from_slice(b"N\r\nq440\r\nQ320,24\r\nD10\r\n");
 
     // product 1 at y=0
     out.extend_from_slice(&image_to_gw(0, 0, &img1));
     // barcode line under product 1; use normalized code
     let b1 = normalize_ean13(p1_barcode.to_string()).unwrap_or_else(|_| p1_barcode.to_string());
-    let barcode_line1 = format!("B20,90,0,1,2,4,60,B,\"{}\"\n", b1);
+    let barcode_line1 = format!("B20,90,0,1,2,4,60,B,\"{}\"\r\n", b1);
     out.extend_from_slice(barcode_line1.as_bytes());
 
     // product 2 at y = prod_h (leave some spacing)
     out.extend_from_slice(&image_to_gw(0, prod_h - 10, &img2));
     let b2 = normalize_ean13(p2_barcode.to_string()).unwrap_or_else(|_| p2_barcode.to_string());
-    let barcode_line2 = format!("B20,250,0,1,2,4,60,B,\"{}\"\n", b2);
+    let barcode_line2 = format!("B20,250,0,1,2,4,60,B,\"{}\"\r\n", b2);
     out.extend_from_slice(barcode_line2.as_bytes());
 
-    out.extend_from_slice(b"P1\n");
+    out.extend_from_slice(b"P1\r\n");
     out
 }
