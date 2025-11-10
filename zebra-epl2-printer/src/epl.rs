@@ -1,5 +1,6 @@
 use image::ImageBuffer;
 use image::Luma;
+use crate::consts::INVERT_BITS;
 
 /// Helper to append an EPL ASCII command line terminated with CRLF
 pub fn epl_line(buf: &mut Vec<u8>, s: &str) {
@@ -23,6 +24,9 @@ pub fn image_to_row_bytes(img: &ImageBuffer<Luma<u8>, Vec<u8>>) -> (u32, u32, Ve
                 out[idx] |= 1 << (7 - (x % 8));
             }
         }
+    }
+    if INVERT_BITS {
+        for b in &mut out { *b = !*b; }
     }
     (w, h, out)
 }
