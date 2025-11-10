@@ -16,14 +16,14 @@ fn print_two_product_label(
 ) -> Result<(), String> {
     // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let data = zebra_epl2_printer::build_two_product_label(
+    let data = zebra_epl2_printer::build_two_product_label_clean_centered(
+        font,
         &p1_name,
         &p1_price,
         &p1_barcode,
         &p2_name,
         &p2_price,
         &p2_barcode,
-        font,
     );
     zebra_epl2_printer::send_raw_to_printer(&printer, &data).map_err(|e| e.to_string())
 }
