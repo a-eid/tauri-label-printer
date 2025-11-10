@@ -1,4 +1,5 @@
-use crate::graphics::render_arabic_line_1bit_right;
+// Backwards-compat: expose the new right-aligned renderer under the old name
+use crate::graphics::render_arabic_line_1bit_right as render_arabic_line_1bit;
 use crate::barcode::normalize_ean13;
 use crate::epl::{image_to_row_bytes, gw_bytes, epl_line};
 
