@@ -16,17 +16,17 @@ const LABEL_W: u32 = 440;          // dots (≈55 mm)
 const LABEL_H: u32 = 320;          // dots (≈40 mm)
 const PAD_RIGHT: u32 = 10;
 
-const FONT_PX: f32 = 44.0;         // bigger, readable
+const FONT_PX: f32 = 28.0;         // smaller to fit both products
 const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
 
-const DARKNESS: u8 = 5;            // D0..D15
+const DARKNESS: u8 = 7;            // D0..D15
 const SPEED: u8 = 3;               // S1..S6
 
 const NARROW: u32 = 2;             // EAN13 module width (2–3)
-const HEIGHT: u32 = 50;            // barcode bar height
+const HEIGHT: u32 = 45;            // barcode bar height (reduced to fit)
 
-const FORCE_LANDSCAPE: bool = true; // set true if driver prints rotated
-const INVERT_BITS: bool = true;     // flip GW bytes so black text on white
+const FORCE_LANDSCAPE: bool = false; // Driver should be Portrait
+const INVERT_BITS: bool = false;     // Normal polarity (black = 1)
 
 // ======== Public API ========
 
@@ -47,8 +47,8 @@ pub fn build_two_product_label(
     let mut im1 = render_arabic_line_tight_1bit(&t1, font_bytes, FONT_PX, 3, BOLD_STROKE);
     let mut im2 = render_arabic_line_tight_1bit(&t2, font_bytes, FONT_PX, 3, BOLD_STROKE);
 
-    // Compensate Landscape if needed
-    if FORCE_LANDSCAPE { im1 = rotate90(&im1); im2 = rotate90(&im2); }
+    // No rotation needed - driver should be in Portrait mode
+    // if FORCE_LANDSCAPE { im1 = rotate90(&im1); im2 = rotate90(&im2); }
 
     let (w1,h1,r1) = image_to_row_bytes(&im1);
     let (w2,h2,r2) = image_to_row_bytes(&im2);
@@ -57,11 +57,11 @@ pub fn build_two_product_label(
     let x1 = LABEL_W - PAD_RIGHT - w1;
     let x2 = LABEL_W - PAD_RIGHT - w2;
 
-    // Y layout with space for HRI
-    let text1_y = 8;
-    let bc1_y   = text1_y + h1 + 16;
-    let text2_y = bc1_y   + HEIGHT + 26;
-    let bc2_y   = text2_y + h2 + 16;
+    // Y layout with space for HRI - both products on ONE label
+    let text1_y = 10;
+    let bc1_y   = text1_y + h1 + 8;
+    let text2_y = bc1_y   + HEIGHT + 20;  // Second product below first
+    let bc2_y   = text2_y + h2 + 8;
 
     // Center EAN-13 (95 modules)
     let bx = center_x_for_ean13(LABEL_W, NARROW);
@@ -73,24 +73,16 @@ pub fn build_two_product_label(
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
-    if !FORCE_LANDSCAPE {
-        gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
-        epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
-            bx, bc1_y, NARROW, 4, HEIGHT, barcode1));
-        gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
-        epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
-            bx, bc2_y, NARROW, 4, HEIGHT, barcode2));
-    } else {
-        // Landscape compensation: swap axes, rotate barcodes (rot=1)
-        gw_bytes(&mut buf, text1_y, x1, w1, h1, &r1);
-        epl_line(&mut buf, &format!("B{},{},1,1,{},{},{},B,\"{}\"",
-            bc1_y, bx, NARROW, 4, HEIGHT, barcode1));
-        gw_bytes(&mut buf, text2_y, x2, w2, h2, &r2);
-        epl_line(&mut buf, &format!("B{},{},1,1,{},{},{},B,\"{}\"",
-            bc2_y, bx, NARROW, 4, HEIGHT, barcode2));
-    }
+    // Always portrait mode - both products on same label
+    gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
+    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
+        bx, bc1_y, NARROW, 4, HEIGHT, barcode1));
 
-    epl_line(&mut buf, "P1");
+    gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
+    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
+        bx, bc2_y, NARROW, 4, HEIGHT, barcode2));
+
+    epl_line(&mut buf, "P1");  // Print exactly ONE label
     buf
 }
 
@@ -103,10 +95,15 @@ fn bidi_then_shape(text: &str, reshaper: &ArabicReshaper) -> String {
     let (levels, ranges) = info.visual_runs(para, para.range.clone());
 
     let mut out = String::new();
-    for (level, range) in levels.into_iter().zip(ranges.into_iter()) {
+    // Collect runs in reverse order for proper RTL display
+    let runs: Vec<_> = levels.into_iter().zip(ranges.into_iter()).collect();
+    for (level, range) in runs.into_iter().rev() {
         let slice = &text[range];
-        if level.is_rtl() { out.push_str(&reshaper.reshape(slice)); }
-        else { out.push_str(slice); }
+        if level.is_rtl() { 
+            out.push_str(&reshaper.reshape(slice)); 
+        } else { 
+            out.push_str(slice); 
+        }
     }
     out
 }
