@@ -12,7 +12,9 @@ pub fn image_to_gw(x: u32, y: u32, img: &GrayImage) -> Vec<u8> {
 
     // Header: GWx,y,w,h,bytesperrow, (using ASCII header and CRLF)
     // Many EPL implementations expect binary following the comma, so we send header then binary.
-    let header = format!("GW{},{},{},{},{}\n", x, y, width, height, bytes_per_row);
+    // EPL expects the GW header in ASCII followed by the raw bitmap bytes.
+    // Use CRLF after the header and do not append extra newlines after the binary data.
+    let header = format!("GW{},{},{},{},{}\r\n", x, y, width, height, bytes_per_row);
     data.extend_from_slice(header.as_bytes());
 
     // Pack bits MSB first per byte
@@ -38,7 +40,6 @@ pub fn image_to_gw(x: u32, y: u32, img: &GrayImage) -> Vec<u8> {
         }
     }
 
-    // Terminator newline to be safe
-    data.push(b'\n');
+    // Do not add extra newline/terminator bytes after the binary payload.
     data
 }

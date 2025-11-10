@@ -41,6 +41,12 @@ fn print_sample_label() -> Result<(), String> {
         "622300654321",
         font,
     );
+    // Write the generated EPL to a temp file for debugging (so you can inspect the raw job)
+    if let Ok(tmp) = std::env::temp_dir().join("last_epl.bin").into_os_string().into_string() {
+        let _ = std::fs::write(&tmp, &epl);
+        println!("Wrote EPL debug file: {}", tmp);
+    }
+
     // send to printer named "Zebra LP2824" - adjust if your printer name differs
     zebra_epl2_printer::send_raw_to_printer("Zebra LP2824", &epl).map_err(|e| e.to_string())
 }
