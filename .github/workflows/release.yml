@@ -44,6 +44,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Debug installed packages
+        run: |
+          echo "pnpm version:"; pnpm -v || true
+          echo "node version:"; node -v || true
+          echo "Listing @tauri-apps packages:"; pnpm ls @tauri-apps --depth 0 || true
+          echo "Attempt to require.resolve @tauri-apps/api/tauri using node:";
+          node -e "try { console.log(require.resolve('@tauri-apps/api/tauri')); } catch(e) { console.error('resolve failed:', e.message); process.exit(0); }"
+
       - name: Build Tauri App
         run: pnpm run tauri build
 
