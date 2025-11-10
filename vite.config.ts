@@ -2,10 +2,24 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "url";
 import { dirname, resolve } from "path";
+import { createRequire } from "module";
 
 const host = process.env.TAURI_DEV_HOST;
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
+let tauriResolved: string | undefined;
+let tauriPkgResolved: string | undefined;
+try {
+  tauriResolved = require.resolve("@tauri-apps/api/tauri");
+} catch (e) {
+  // ignore, will fallback to package dir
+}
+try {
+  tauriPkgResolved = require.resolve("@tauri-apps/api");
+} catch (e) {
+  // ignore
+}
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
@@ -19,8 +33,11 @@ export default defineConfig(async () => ({
   // 2. ensure Vite can resolve the @tauri-apps/api package reliably under pnpm layouts
   resolve: {
     alias: {
-      // point the package id to the node_modules copy so Rollup/Vite can resolve the subpath
-      "@tauri-apps/api": resolve(__dirname, "node_modules", "@tauri-apps", "api"),
+      // Resolve the tauri subpath to the actual installed file so Rollup can load it
+      ...(tauriResolved ? { "@tauri-apps/api/tauri": tauriResolved } : {}),
+      ...(tauriPkgResolved
+        ? { "@tauri-apps/api": tauriPkgResolved }
+        : { "@tauri-apps/api": resolve(__dirname, "node_modules", "@tauri-apps", "api") }),
     },
   },
 
