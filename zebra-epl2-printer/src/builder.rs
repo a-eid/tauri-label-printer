@@ -1,5 +1,5 @@
-// Backwards-compat: expose the new right-aligned renderer under the old name
-use crate::graphics::render_arabic_line_1bit_right as render_arabic_line_1bit;
+// Import both renderer names so old and new call sites resolve
+use crate::graphics::{render_arabic_line_1bit, render_arabic_line_1bit_right};
 use crate::barcode::normalize_ean13;
 use crate::epl::{image_to_row_bytes, gw_bytes, epl_line};
 
@@ -67,8 +67,8 @@ pub fn build_two_product_label_clean_centered(
 
     // Render tight images with larger font
     let label_w = 440u32;
-    let img1 = render_arabic_line_1bit_right(&t1, font_bytes, label_w, 10, 36.0);
-    let img2 = render_arabic_line_1bit_right(&t2, font_bytes, label_w, 10, 36.0);
+    let img1 = render_arabic_line_1bit(&t1, font_bytes, label_w, 10, 36.0);
+    let img2 = render_arabic_line_1bit(&t2, font_bytes, label_w, 10, 36.0);
 
     let (_w1, h1, r1) = image_to_row_bytes(&img1);
     let (_w2, h2, r2) = image_to_row_bytes(&img2);
