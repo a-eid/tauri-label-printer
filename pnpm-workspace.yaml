@@ -1,9 +1,2 @@
 onlyBuiltDependencies:
   - esbuild
-
-# Explicit workspace packages. pnpm v7+ requires `packages` when a pnpm-workspace.yaml
-# file is present. CI failed with "packages field missing or empty" when running
-# `pnpm install` at the repo root. Listing the root as a workspace package makes
-# the workspace valid while keeping existing behavior.
-packages:
-  - '.'

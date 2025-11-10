@@ -1,15 +1,9 @@
-name: Build Windows App
+name: Build Windows App (disabled auto-runs)
 
+# This workflow has been converted to manual-only to avoid duplicate CI runs.
+# Use the `workflow_dispatch` event to run it manually from the GitHub UI.
 on:
-  push:
-    branches:
-      - main
-      - master
-  pull_request:
-    branches:
-      - main
-      - master
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build-windows:
