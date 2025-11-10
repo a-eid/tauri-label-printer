@@ -28,11 +28,28 @@ fn print_two_product_label(
     zebra_epl2_printer::send_raw_to_printer(&printer, &data).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn print_sample_label() -> Result<(), String> {
+    // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
+    let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
+    let epl = zebra_epl2_printer::build_two_product_label(
+        "عصير برتقال صغير",
+        "5.00 EGP",
+        "622300123456",
+        "مياه معدنية صغيرة",
+        "3.50 EGP",
+        "622300654321",
+        font,
+    );
+    // send to printer named "Zebra LP2824" - adjust if your printer name differs
+    zebra_epl2_printer::send_raw_to_printer("Zebra LP2824", &epl).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, print_two_product_label])
+    .invoke_handler(tauri::generate_handler![greet, print_two_product_label, print_sample_label])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
