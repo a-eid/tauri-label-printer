@@ -1,2 +1,8 @@
 onlyBuiltDependencies:
   - esbuild
+
+# Ensure pnpm recognizes this repository root as a workspace package.
+# Without `packages:` pnpm v7+ may error with "packages field missing or empty" when
+# running `pnpm install` in a workspace that has this file.
+packages:
+  - '.'
