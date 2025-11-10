@@ -16,7 +16,7 @@ const LABEL_W: u32 = 440;          // dots (≈55 mm)
 const LABEL_H: u32 = 320;          // dots (≈40 mm)
 const PAD_RIGHT: u32 = 10;
 
-const FONT_PX: f32 = 44.0;         // larger for readability; still fits two products
+const FONT_PX: f32 = 52.0;         // even larger for better readability
 const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
 
 const DARKNESS: u8 = 6;            // D0..D15 (tuned to reduce banding)
@@ -77,6 +77,10 @@ pub fn build_two_product_label(
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
     epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
         bx, bc1_y, NARROW, 4, HEIGHT, barcode1));
+
+    // Dotted separator line between products
+    let separator_y = bc1_y + HEIGHT + 15;
+    draw_dotted_line(&mut buf, 20, separator_y, LABEL_W - 40);
 
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
     epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
@@ -201,6 +205,20 @@ fn gw_bytes(buf:&mut Vec<u8>, x:u32, y:u32, w:u32, h:u32, rows:&[u8]) {
 fn center_x_for_ean13(label_w: u32, narrow: u32) -> u32 {
     let w = 95 * narrow as u32; // EAN-13 modules
     (label_w - w) / 2
+}
+
+fn draw_dotted_line(buf: &mut Vec<u8>, start_x: u32, y: u32, width: u32) {
+    // Draw dotted line using EPL LO command (Line Oblique)
+    let dot_length = 8;  // Length of each dot segment
+    let gap_length = 6;  // Gap between dots
+    let total_pattern = dot_length + gap_length;
+    
+    let mut x = start_x;
+    while x + dot_length < start_x + width {
+        // LO command: LO x,y,thickness,width
+        epl_line(buf, &format!("LO{},{},1,{}", x, y, dot_length));
+        x += total_pattern;
+    }
 }
 
 // ======== Windows printer (optional, keep if you need send_raw_to_printer) ========
