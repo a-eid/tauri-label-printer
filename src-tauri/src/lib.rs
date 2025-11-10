@@ -25,7 +25,7 @@ fn print_two_product_label(
         &p2_price,
         &p2_barcode,
     );
-    zebra_epl2_printer::send_raw_to_printer(&printer, &data).map_err(|e| e.to_string())
+    send_to_printer_cross_os(&printer, &data)
 }
 
 #[tauri::command]
@@ -47,8 +47,8 @@ fn print_sample_label() -> Result<(), String> {
         println!("Wrote EPL debug file: {}", tmp);
     }
 
-    // send to printer named "Zebra LP2824" - adjust if your printer name differs
-    zebra_epl2_printer::send_raw_to_printer("Zebra LP2824", &epl).map_err(|e| e.to_string())
+    // send to printer named "Zebra LP2824" (Windows) or write to temp on non-Windows
+    send_to_printer_cross_os("Zebra LP2824", &epl)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -58,4 +58,17 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![greet, print_two_product_label, print_sample_label])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+// Cross-OS printer sink: real spool on Windows, temp file elsewhere
+fn send_to_printer_cross_os(printer: &str, data: &[u8]) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        return zebra_epl2_printer::send_raw_to_printer(printer, data).map_err(|e| e.to_string());
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let path = std::env::temp_dir().join("last_epl.bin");
+        std::fs::write(&path, data).map_err(|e| e.to_string())
+    }
 }

@@ -16,14 +16,14 @@ const LABEL_W: u32 = 440;          // dots (≈55 mm)
 const LABEL_H: u32 = 320;          // dots (≈40 mm)
 const PAD_RIGHT: u32 = 10;
 
-const FONT_PX: f32 = 28.0;         // smaller to fit both products
+const FONT_PX: f32 = 44.0;         // larger for readability; still fits two products
 const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
 
-const DARKNESS: u8 = 7;            // D0..D15
+const DARKNESS: u8 = 6;            // D0..D15 (tuned to reduce banding)
 const SPEED: u8 = 3;               // S1..S6
 
 const NARROW: u32 = 2;             // EAN13 module width (2–3)
-const HEIGHT: u32 = 45;            // barcode bar height (reduced to fit)
+const HEIGHT: u32 = 50;            // barcode bar height
 
 const FORCE_LANDSCAPE: bool = false; // Driver should be Portrait
 const INVERT_BITS: bool = false;     // Normal polarity (black = 1)
@@ -95,14 +95,13 @@ fn bidi_then_shape(text: &str, reshaper: &ArabicReshaper) -> String {
     let (levels, ranges) = info.visual_runs(para, para.range.clone());
 
     let mut out = String::new();
-    // Collect runs in reverse order for proper RTL display
-    let runs: Vec<_> = levels.into_iter().zip(ranges.into_iter()).collect();
-    for (level, range) in runs.into_iter().rev() {
+    // Visual order runs; reshape RTL runs without reversing glyph sequence
+    for (level, range) in levels.into_iter().zip(ranges.into_iter()) {
         let slice = &text[range];
-        if level.is_rtl() { 
-            out.push_str(&reshaper.reshape(slice)); 
-        } else { 
-            out.push_str(slice); 
+        if level.is_rtl() {
+            out.push_str(&reshaper.reshape(slice));
+        } else {
+            out.push_str(slice);
         }
     }
     out
