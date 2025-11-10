@@ -9,8 +9,5 @@ rusttype = "0.9"
 ar-reshaper = "0.3"
 unicode-bidi = "0.3"
 
-# Windows-only printing API (optional feature)
-winapi = { version = "0.3", optional = true }
-
-[features]
-windows-print = ["winapi"]
+# Win32 printing (used on Windows builds)
+winapi = "0.3"

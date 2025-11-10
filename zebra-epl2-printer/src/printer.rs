@@ -12,19 +12,21 @@ pub fn send_raw_to_printer(printer_name: &str, data: &[u8]) -> Result<(), Box<dy
         use winapi::shared::ntdef::LPWSTR;
         use std::ptr::null_mut;
 
-        // convert printer name to wide
-        let wide: Vec<u16> = OsStr::new(printer_name).encode_wide().chain(once(0)).collect();
+        // convert printer name and helper strings to wide
+        let wide_name: Vec<u16> = OsStr::new(printer_name).encode_wide().chain(once(0)).collect();
+        let wide_doc: Vec<u16> = OsStr::new("EPL Job").encode_wide().chain(once(0)).collect();
+        let wide_raw: Vec<u16> = OsStr::new("RAW").encode_wide().chain(once(0)).collect();
 
         unsafe {
             let mut handle: *mut winapi::ctypes::c_void = null_mut();
-            if OpenPrinterW(wide.as_ptr() as LPWSTR, &mut handle as *mut _ as *mut _, null_mut()) == 0 {
+            if OpenPrinterW(wide_name.as_ptr() as LPWSTR, &mut handle as *mut _ as *mut _, null_mut()) == 0 {
                 return Err(Box::<dyn Error>::from("OpenPrinterW failed"));
             }
 
             let doc_info = DOC_INFO_1W {
-                pDocName: wide.as_ptr() as LPWSTR,
+                pDocName: wide_doc.as_ptr() as LPWSTR,
                 pOutputFile: null_mut(),
-                pDataType: wide.as_ptr() as LPWSTR, // raw
+                pDataType: wide_raw.as_ptr() as LPWSTR, // RAW data type
             };
 
             let job = StartDocPrinterW(handle as *mut _, 1, &doc_info as *const _ as *mut _);
