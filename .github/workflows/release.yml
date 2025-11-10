@@ -37,7 +37,14 @@ jobs:
       - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ${{ env.STORE_PATH }}
+          # Use computed STORE_PATH if available, but provide common pnpm store fallbacks so
+          # the `path` input is never empty (actions/cache requires a non-empty path).
+          # On Windows and Linux/macOS pnpm default store is under the user's home directory
+          # as `.pnpm-store` so we include that as a fallback.
+          path: |
+            ${{ env.STORE_PATH }}
+            ~/.pnpm-store
+            ~/.pnpm
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
