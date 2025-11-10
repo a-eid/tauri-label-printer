@@ -60,7 +60,7 @@ pub fn build_two_product_label(
     // Y layout with space for HRI - both products on ONE label
     let text1_y = 10;
     let bc1_y   = text1_y + h1 + 8;
-    let text2_y = bc1_y   + HEIGHT + 20;  // Second product below first
+    let text2_y = bc1_y   + HEIGHT + 35;  // More spacing to avoid overlap
     let bc2_y   = text2_y + h2 + 8;
 
     // Center EAN-13 (95 modules)
@@ -95,14 +95,21 @@ fn bidi_then_shape(text: &str, reshaper: &ArabicReshaper) -> String {
     let (levels, ranges) = info.visual_runs(para, para.range.clone());
 
     let mut out = String::new();
-    // Visual order runs; reshape RTL, then reverse character order for correct visual display
+    // Visual order runs; reshape RTL runs only, preserve LTR (digits) order
     for (level, range) in levels.into_iter().zip(ranges.into_iter()) {
         let slice = &text[range];
         if level.is_rtl() {
+            // Only reverse if it's actually Arabic text (not digits/punctuation)
             let shaped = reshaper.reshape(slice);
-            // Reverse the shaped string to get correct visual order
-            let reversed: String = shaped.chars().rev().collect();
-            out.push_str(&reversed);
+            // Check if the slice contains Arabic letters vs just digits/symbols
+            if slice.chars().any(|c| c >= '\u{0600}' && c <= '\u{06FF}') {
+                // Contains Arabic - reverse after shaping
+                let reversed: String = shaped.chars().rev().collect();
+                out.push_str(&reversed);
+            } else {
+                // Just numbers/punctuation - don't reverse
+                out.push_str(&shaped);
+            }
         } else {
             out.push_str(slice);
         }
