@@ -1,22 +1,27 @@
 use image::{ImageBuffer, Luma, DynamicImage};
 use rusttype::{Font, Scale, point};
 use ar_reshaper::{ArabicReshaper, ReshaperConfig};
-use unicode_bidi::BidiInfo;
+use unicode_bidi::{BidiInfo, Level};
 
 /// Return visually ordered string with Arabic runs reshaped, LTR runs unchanged.
 /// This keeps numbers LTR and Arabic RTL, then we can render visually left→right.
 fn bidi_then_shape(text: &str, reshaper: &ArabicReshaper) -> String {
     let info = BidiInfo::new(text, None);
-    // Treat the whole paragraph as one line and iterate visual runs
+
+    // Treat the paragraph as a single line
     let para = &info.paragraphs[0];
     let line = para.range.clone();
+
+    // unicode-bidi 0.3 returns (levels, ranges)
+    let (levels, ranges) = info.visual_runs(para, line);
+
     let mut out = String::new();
-    for run in info.visual_runs(para, line) {
-        let slice = &text[run.range.clone()];
-        if run.level.is_rtl() {
-            out.push_str(&reshaper.reshape(slice));
+    for (level, range) in levels.into_iter().zip(ranges.into_iter()) {
+        let slice = &text[range];
+        if level.is_rtl() {
+            out.push_str(&reshaper.reshape(slice)); // reshape only RTL
         } else {
-            out.push_str(slice);
+            out.push_str(slice);                    // keep LTR (e.g., numbers)
         }
     }
     out
