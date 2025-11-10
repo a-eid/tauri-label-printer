@@ -1,4 +1,4 @@
-use crate::graphics::render_arabic_line_1bit;
+use crate::graphics::render_arabic_line_1bit_right;
 use crate::barcode::normalize_ean13;
 use crate::epl::{image_to_row_bytes, gw_bytes, epl_line};
 
@@ -42,6 +42,59 @@ pub fn build_two_product_label(
 
     epl_line(&mut out, "P1");
     out
+}
+
+// Center EAN13: width = modules * narrow, modules = 95
+fn center_x_for_ean13(label_w: u32, narrow: u32) -> u32 {
+    let barcode_w = 95u32.saturating_mul(narrow);
+    if barcode_w >= label_w { 0 } else { (label_w - barcode_w) / 2 }
+}
+
+/// Build a centered, clean two-product label with larger Arabic text, centered EAN-13, and tuned barcodes.
+pub fn build_two_product_label_clean_centered(
+    font_bytes: &[u8],
+    p1_name: &str,
+    p1_price: &str,
+    p1_barcode: &str,
+    p2_name: &str,
+    p2_price: &str,
+    p2_barcode: &str,
+) -> Vec<u8> {
+    // currency fix: use Arabic currency symbol
+    let t1 = format!("{}    {} {}", p1_name, p1_price, "ج.م");
+    let t2 = format!("{}    {} {}", p2_name, p2_price, "ج.م");
+
+    // Render tight images with larger font
+    let label_w = 440u32;
+    let img1 = render_arabic_line_1bit_right(&t1, font_bytes, label_w, 10, 36.0);
+    let img2 = render_arabic_line_1bit_right(&t2, font_bytes, label_w, 10, 36.0);
+
+    let (_w1, h1, r1) = image_to_row_bytes(&img1);
+    let (_w2, h2, r2) = image_to_row_bytes(&img2);
+
+    // barcode tuning (avoid clipping & center)
+    let narrow: u32 = 2; // 2-3 recommended
+    let wide: u32 = 4;
+    let bc_height: u32 = 52; // reduce to allow HRI
+    let x_center = center_x_for_ean13(label_w, narrow);
+
+    let mut buf = Vec::new();
+    epl_line(&mut buf, "N");
+    epl_line(&mut buf, "q440");
+    epl_line(&mut buf, "Q320,24");
+    epl_line(&mut buf, "D6"); // lighter to reduce banding
+    epl_line(&mut buf, "S3"); // slower = cleaner
+
+    // Block 1
+    gw_bytes(&mut buf, 10, 8, 440, h1, &r1);
+    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"", x_center, 88, narrow, wide, bc_height, p1_barcode));
+
+    // Block 2
+    gw_bytes(&mut buf, 10, 172, 440, h2, &r2);
+    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"", x_center, 232, narrow, wide, bc_height, p2_barcode));
+
+    epl_line(&mut buf, "P1");
+    buf
 }
 
 /// New clean builder that takes combined text strings (Arabic + price) directly

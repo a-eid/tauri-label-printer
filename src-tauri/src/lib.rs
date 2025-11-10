@@ -32,11 +32,13 @@ fn print_two_product_label(
 fn print_sample_label() -> Result<(), String> {
     // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let epl = zebra_epl2_printer::build_two_product_label_clean(
+    let epl = zebra_epl2_printer::build_two_product_label_clean_centered(
         font,
-        "عصير برتقال صغير    5.00 EGP",
+        "عصير برتقال صغير",
+        "5.00",
         "622300123456",
-        "مياه معدنية صغيرة    3.50 EGP",
+        "مياه معدنية صغيرة",
+        "3.50",
         "622300654321",
     );
     // Write the generated EPL to a temp file for debugging (so you can inspect the raw job)
