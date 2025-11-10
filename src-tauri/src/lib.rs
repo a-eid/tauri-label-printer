@@ -14,8 +14,8 @@ fn print_two_product_label(
     p2_price: String,
     p2_barcode: String,
 ) -> Result<(), String> {
-    // include font from the sibling crate (add Amiri-Regular.ttf into zebra-epl2-printer/src/font/)
-    let font = include_bytes!("../zebra-epl2-printer/src/font/Amiri-Regular.ttf");
+    // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
+    let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
     let data = zebra_epl2_printer::build_two_product_label(
         &p1_name,
         &p1_price,
