@@ -1,87 +1,51 @@
-import { invoke } from "@tauri-apps/api/tauri";
 import { useState } from "react";
+import reactLogo from "./assets/react.svg";
+import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 function App() {
-	const [printer, setPrinter] = useState("Zebra LP2824");
-	const [p1Name, setP1Name] = useState("");
-	const [p1Price, setP1Price] = useState("");
-	const [p1Barcode, setP1Barcode] = useState("");
-	const [p2Name, setP2Name] = useState("");
-	const [p2Price, setP2Price] = useState("");
-	const [p2Barcode, setP2Barcode] = useState("");
-	const [msg, setMsg] = useState("");
+  const [greetMsg, setGreetMsg] = useState("");
+  const [name, setName] = useState("");
 
-	async function printLabel() {
-		setMsg("Printing...");
-		try {
-			const res: string = await invoke("print_two_product_label", {
-				printer,
-				p1_name: p1Name,
-				p1_price: p1Price,
-				p1_barcode: p1Barcode,
-				p2_name: p2Name,
-				p2_price: p2Price,
-				p2_barcode: p2Barcode,
-			});
-			setMsg(`✅ ${res}`);
-		} catch (e: any) {
-			setMsg(`❌ Failed: ${e?.toString?.() ?? String(e)}`);
-		}
-	}
+  async function greet() {
+    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+    setGreetMsg(await invoke("greet", { name }));
+  }
 
-	return (
-		<main className="container">
-			<h1>Label Printer</h1>
-			<div className="form-row">
-				<label htmlFor="nothing">Printer name</label>
-				<input
-					value={printer}
-					onChange={(e) => setPrinter(e.currentTarget.value)}
-				/>
+  return (
+    <main className="container">
+      <h1>Welcome to Tauri + React</h1>
 
-				<h3>Product 1</h3>
-				<input
-					placeholder="Name (Arabic)"
-					value={p1Name}
-					onChange={(e) => setP1Name(e.currentTarget.value)}
-				/>
-				<input
-					placeholder="Price"
-					value={p1Price}
-					onChange={(e) => setP1Price(e.currentTarget.value)}
-				/>
-				<input
-					placeholder="EAN-13"
-					value={p1Barcode}
-					onChange={(e) => setP1Barcode(e.currentTarget.value)}
-				/>
+      <div className="row">
+        <a href="https://vite.dev" target="_blank">
+          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
+        </a>
+        <a href="https://tauri.app" target="_blank">
+          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
+        </a>
+        <a href="https://react.dev" target="_blank">
+          <img src={reactLogo} className="logo react" alt="React logo" />
+        </a>
+      </div>
+      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
 
-				<h3>Product 2</h3>
-				<input
-					placeholder="Name (Arabic)"
-					value={p2Name}
-					onChange={(e) => setP2Name(e.currentTarget.value)}
-				/>
-				<input
-					placeholder="Price"
-					value={p2Price}
-					onChange={(e) => setP2Price(e.currentTarget.value)}
-				/>
-				<input
-					placeholder="EAN-13"
-					value={p2Barcode}
-					onChange={(e) => setP2Barcode(e.currentTarget.value)}
-				/>
-
-				<button onClick={printLabel} type="button">
-					Print Label
-				</button>
-
-				<div className="toast">{msg}</div>
-			</div>
-		</main>
-	);
+      <form
+        className="row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          greet();
+        }}
+      >
+        <input
+          id="greet-input"
+          onChange={(e) => setName(e.currentTarget.value)}
+          placeholder="Enter a name..."
+        />
+        <button type="submit">Greet</button>
+      </form>
+      <p>{greetMsg}</p>
+    </main>
+  );
 }
 
 export default App;
