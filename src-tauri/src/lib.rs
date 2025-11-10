@@ -16,7 +16,7 @@ fn print_two_product_label(
 ) -> Result<(), String> {
     // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let data = zebra_epl2_printer::build_two_product_label_clean_centered(
+    let data = zebra_epl2_printer::build_two_product_label(
         font,
         &p1_name,
         &p1_price,
@@ -32,7 +32,7 @@ fn print_two_product_label(
 fn print_sample_label() -> Result<(), String> {
     // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let epl = zebra_epl2_printer::build_two_product_label_clean_centered(
+    let epl = zebra_epl2_printer::build_two_product_label(
         font,
         "عصير برتقال صغير",
         "5.00",

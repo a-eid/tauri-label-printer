@@ -8,7 +8,7 @@
 use image::{ImageBuffer, Luma, DynamicImage};
 use rusttype::{Font, Scale, point};
 use ar_reshaper::{ArabicReshaper, ReshaperConfig};
-use unicode_bidi::{BidiInfo, Level};
+use unicode_bidi::BidiInfo;
 
 // ======== Config (edit if needed) ========
 
