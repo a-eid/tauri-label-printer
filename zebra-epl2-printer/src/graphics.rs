@@ -1,4 +1,4 @@
-use image::{ImageBuffer, Luma};
+use image::{ImageBuffer, Luma, DynamicImage, GenericImageView};
 use rusttype::{Font, Scale, point};
 use ar_reshaper::{ArabicReshaper, ReshaperConfig};
 use unicode_bidi::BidiInfo;
