@@ -26,7 +26,7 @@ pub fn send_raw_to_printer(printer_name: &str, data: &[u8]) -> Result<(), Box<dy
             let doc_info = DOC_INFO_1W {
                 pDocName: wide_doc.as_ptr() as LPWSTR,
                 pOutputFile: null_mut(),
-                pDataType: wide_raw.as_ptr() as LPWSTR, // RAW data type
+                pDatatype: wide_raw.as_ptr() as LPWSTR, // RAW data type
             };
 
             let job = StartDocPrinterW(handle as *mut _, 1, &doc_info as *const _ as *mut _);
