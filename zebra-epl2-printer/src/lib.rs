@@ -26,7 +26,7 @@ const NARROW: u32 = 2;             // EAN13 module width (2–3)
 const HEIGHT: u32 = 50;            // barcode bar height
 
 const FORCE_LANDSCAPE: bool = false; // Driver should be Portrait
-const INVERT_BITS: bool = false;     // Normal polarity (black = 1)
+const INVERT_BITS: bool = true;      // Invert GW bits for black-on-white
 
 // ======== Public API ========
 
@@ -95,11 +95,14 @@ fn bidi_then_shape(text: &str, reshaper: &ArabicReshaper) -> String {
     let (levels, ranges) = info.visual_runs(para, para.range.clone());
 
     let mut out = String::new();
-    // Visual order runs; reshape RTL runs without reversing glyph sequence
+    // Visual order runs; reshape RTL, then reverse character order for correct visual display
     for (level, range) in levels.into_iter().zip(ranges.into_iter()) {
         let slice = &text[range];
         if level.is_rtl() {
-            out.push_str(&reshaper.reshape(slice));
+            let shaped = reshaper.reshape(slice);
+            // Reverse the shaped string to get correct visual order
+            let reversed: String = shaped.chars().rev().collect();
+            out.push_str(&reversed);
         } else {
             out.push_str(slice);
         }
