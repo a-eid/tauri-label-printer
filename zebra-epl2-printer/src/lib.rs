@@ -209,7 +209,7 @@ pub fn build_four_product_label_with_brand(
     // Equal quadrants: 440÷2=220 width, 320÷2=160 height per quadrant
     let quad_w = LABEL_W / 2;  // 220 dots per column
     let quad_h = LABEL_H / 2;  // 160 dots per row
-    let gap = -2;              // Horizontal gap between quadrants (negative to overlap slightly, reducing space by 6px from original 4)
+    let gap: i32 = -2;         // Horizontal gap between quadrants (negative to overlap slightly, reducing space by 6px from original 4)
     let grid_offset_y = 18;    // Move entire grid down (shifted up by 2px from 20)
     
     // Quadrant boundaries with gap:
@@ -217,16 +217,16 @@ pub fn build_four_product_label_with_brand(
     // Top row: grid_offset_y to (160-gap/2+offset), Bottom row: (160+gap/2+offset) to 320
     
     // Center brand horizontally in each quadrant
-    let brand_x_left = (quad_w - gap/2 - brand_w) / 2;
-    let brand_x_right = quad_w + gap/2 + (quad_w - brand_w) / 2;
+    let brand_x_left = ((quad_w as i32 - gap/2 - brand_w as i32) / 2).max(0) as u32;
+    let brand_x_right = (quad_w as i32 + gap/2 + (quad_w as i32 - brand_w as i32) / 2).max(0) as u32;
     let brand_y_top = grid_offset_y + 4;
-    let brand_y_bottom = grid_offset_y + quad_h + gap/2 + 4;
+    let brand_y_bottom = (grid_offset_y as i32 + quad_h as i32 + gap/2 + 4).max(0) as u32;
 
     // Center product text horizontally within each quadrant
-    let x1 = (quad_w - gap/2 - w1) / 2;                    // Center in top-left quadrant
-    let x2 = quad_w + gap/2 + (quad_w - w2) / 2;           // Center in top-right quadrant  
-    let x3 = (quad_w - gap/2 - w3) / 2;                    // Center in bottom-left quadrant
-    let x4 = quad_w + gap/2 + (quad_w - w4) / 2;           // Center in bottom-right quadrant
+    let x1 = ((quad_w as i32 - gap/2 - w1 as i32) / 2).max(0) as u32;
+    let x2 = (quad_w as i32 + gap/2 + (quad_w as i32 - w2 as i32) / 2).max(0) as u32;
+    let x3 = ((quad_w as i32 - gap/2 - w3 as i32) / 2).max(0) as u32;
+    let x4 = (quad_w as i32 + gap/2 + (quad_w as i32 - w4 as i32) / 2).max(0) as u32;
 
     // Content vertical positions: brand at top, then product, then barcode
     // Shift content up by 10px for better balance
@@ -243,8 +243,8 @@ pub fn build_four_product_label_with_brand(
     let text4_y = brand_y_bottom + brand_h + 6 - shift_up;
     let bc4_y = text4_y + h4 + 3;
 
-    let bc_left_x = center_x_for_ean13_column(quad_w - gap/2, NARROW) + 4;       // Center in left quadrants + 4px shift
-    let bc_right_x = quad_w + gap/2 + center_x_for_ean13_column(quad_w - gap/2, NARROW); // Center in right quadrants
+    let bc_left_x = (center_x_for_ean13_column(((quad_w as i32 - gap/2).max(0)) as u32, NARROW) as i32 + 4).max(0) as u32;
+    let bc_right_x = (quad_w as i32 + gap/2 + center_x_for_ean13_column(((quad_w as i32 - gap/2).max(0)) as u32, NARROW) as i32).max(0) as u32;
 
     let mut buf = Vec::<u8>::new();
     epl_line(&mut buf, "N");
