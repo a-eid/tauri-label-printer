@@ -14,7 +14,7 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn print_label(printer: String, products: Vec<Product>) -> Result<(), String> {
+fn print_label(printer: String, brand_name: String, products: Vec<Product>) -> Result<(), String> {
     // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
     
@@ -31,6 +31,7 @@ fn print_label(printer: String, products: Vec<Product>) -> Result<(), String> {
             // Print 4 products in 2x2 grid layout
             zebra_epl2_printer::build_four_product_label(
                 font,
+                &brand_name,
                 &products[0].name, &products[0].price, &products[0].barcode,
                 &products[1].name, &products[1].price, &products[1].barcode,
                 &products[2].name, &products[2].price, &products[2].barcode,

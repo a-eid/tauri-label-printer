@@ -98,15 +98,21 @@ pub fn build_two_product_label(
 
 /// Build a single EPL2 print job for four products in 2x2 grid.
 /// - `font_bytes`: embedded Arabic font bytes 
+/// - `brand_name`: store/brand name to display at top of each cell
 /// - Four sets of `name/price/barcode` for each quadrant
 /// Returns raw bytes ready to send to the printer (USB raw write).
 pub fn build_four_product_label(
     font_bytes: &[u8],
+    brand_name: &str,
     name1: &str, price1: &str, barcode1: &str,
     name2: &str, price2: &str, barcode2: &str,
     name3: &str, price3: &str, barcode3: &str,
     name4: &str, price4: &str, barcode4: &str,
 ) -> Vec<u8> {
+    // Render brand name (smaller font, same for all cells)
+    let brand_img = render_arabic_line_tight_1bit(brand_name, font_bytes, 24.0, 1, false);
+    let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
+    
     // Compose Arabic lines with currency "ج.م"
     let t1 = format!("{}  {} {}", name1, price1, "ج.م");
     let t2 = format!("{}  {} {}", name2, price2, "ج.م");
@@ -141,26 +147,37 @@ pub fn build_four_product_label(
     // Top row: grid_offset_y to (160-gap/2+offset), Bottom row: (160+gap/2+offset) to 320
     
     // Center text horizontally within each quadrant
-    let x1 = (quad_w - gap/2 - w1) / 2;                    // Center in top-left quadrant
-    let x2 = quad_w + gap/2 + (quad_w - w2) / 2;           // Center in top-right quadrant  
-    let x3 = (quad_w - gap/2 - w3) / 2;                    // Center in bottom-left quadrant
-    let x4 = quad_w + gap/2 + (quad_w - w4) / 2;           // Center in bottom-right quadrant
+    let x1 = (quad_w - gap/2 - w1) / 2;                    // Center product text in top-left quadrant
+    let x2 = quad_w + gap/2 + (quad_w - w2) / 2;           // Center product text in top-right quadrant  
+    let x3 = (quad_w - gap/2 - w3) / 2;                    // Center product text in bottom-left quadrant
+    let x4 = quad_w + gap/2 + (quad_w - w4) / 2;           // Center product text in bottom-right quadrant
     
-    // Center content vertically within each quadrant (shifted down)
-    let quad1_center_y = grid_offset_y + quad_h / 2;                       // ~100 (center of top row)
-    let quad3_center_y = grid_offset_y + quad_h + gap/2 + quad_h / 2;      // ~260 (center of bottom row)
+    // Center brand name horizontally within each quadrant
+    let brand_x1 = (quad_w - gap/2 - brand_w) / 2;                    // Center brand in top-left
+    let brand_x2 = quad_w + gap/2 + (quad_w - brand_w) / 2;           // Center brand in top-right
+    let brand_x3 = (quad_w - gap/2 - brand_w) / 2;                    // Center brand in bottom-left  
+    let brand_x4 = quad_w + gap/2 + (quad_w - brand_w) / 2;           // Center brand in bottom-right
     
-    // Position text and barcodes centered in each quadrant
-    let text1_y = quad1_center_y - (h1 + HEIGHT + 8) / 2;  // Center in top-left
+    // Position content with brand at top, then product info, then barcode
+    let brand_y_offset = grid_offset_y + 8;                           // Brand near top of each cell
+    let brand1_y = brand_y_offset;                                     // Top row brand
+    let brand3_y = brand_y_offset + quad_h + gap/2;                   // Bottom row brand
+    
+    let content_start_y = brand_y_offset + brand_h + 8;              // Start content after brand
+    let quad1_content_y = content_start_y;                           // Top row content area
+    let quad3_content_y = content_start_y + quad_h + gap/2;          // Bottom row content area
+    
+    // Position product text and barcodes in remaining space
+    let text1_y = quad1_content_y + 5;                               // Top-left product text
     let bc1_y = text1_y + h1 + 3;
     
-    let text2_y = quad1_center_y - (h2 + HEIGHT + 8) / 2;  // Center in top-right (same row)
+    let text2_y = quad1_content_y + 5;                               // Top-right product text (same row)
     let bc2_y = text2_y + h2 + 3;
     
-    let text3_y = quad3_center_y - (h3 + HEIGHT + 8) / 2;  // Center in bottom-left
+    let text3_y = quad3_content_y + 5;                               // Bottom-left product text
     let bc3_y = text3_y + h3 + 3;
     
-    let text4_y = quad3_center_y - (h4 + HEIGHT + 8) / 2;  // Center in bottom-right (same row)
+    let text4_y = quad3_content_y + 5;                               // Bottom-right product text (same row)
     let bc4_y = text4_y + h4 + 3;    // Barcode centering within each quadrant
     let bc_left_x = center_x_for_ean13_column(quad_w - gap/2, NARROW) + 4;       // Center in left quadrants + 4px shift
     let bc_right_x = quad_w + gap/2 + center_x_for_ean13_column(quad_w - gap/2, NARROW); // Center in right quadrants
@@ -171,6 +188,12 @@ pub fn build_four_product_label(
     epl_line(&mut buf, &format!("Q{},{}", LABEL_H, 24));
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
+
+    // Brand names at top of each quadrant
+    gw_bytes(&mut buf, brand_x1, brand1_y, brand_w, brand_h, &brand_r);  // Top-left brand
+    gw_bytes(&mut buf, brand_x2, brand1_y, brand_w, brand_h, &brand_r);  // Top-right brand
+    gw_bytes(&mut buf, brand_x3, brand3_y, brand_w, brand_h, &brand_r);  // Bottom-left brand
+    gw_bytes(&mut buf, brand_x4, brand3_y, brand_w, brand_h, &brand_r);  // Bottom-right brand
 
     // Top row: Product 1 (left) and Product 2 (right)
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
