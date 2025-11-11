@@ -111,9 +111,9 @@ pub fn build_four_product_label(
     let bc_right_x = half_w + center_x_for_ean13_column(half_w, NARROW);
 
     let mut buf = Vec::<u8>::new();
-    epl_line(&mut buf, "N");
+    // Skip the N command - start directly with label setup
     epl_line(&mut buf, &format!("q{}", LABEL_W));
-    epl_line(&mut buf, &format!("Q{}", LABEL_H));  // Remove the ",24" gap setting
+    epl_line(&mut buf, &format!("Q{}", LABEL_H));  
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
