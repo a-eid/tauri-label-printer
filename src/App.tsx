@@ -2,6 +2,18 @@ import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 export default function App() {
+	const handleTest = async () => {
+		try {
+			console.log("Testing basic Tauri communication...");
+			const result = await invoke("greet", { name: "Test" });
+			console.log("Greet result:", result);
+			alert("Tauri communication works! Result: " + result);
+		} catch (error) {
+			console.error("Tauri communication failed:", error);
+			alert("Error: " + error);
+		}
+	};
+
 	const handlePrint2 = async () => {
 		try {
 			console.log("Attempting to print 2 products...");
@@ -51,6 +63,13 @@ export default function App() {
 			}}
 		>
 			<h2>Zebra EPL2 Printer Demo</h2>
+			<button
+				type="button"
+				onClick={handleTest}
+				style={{ fontSize: 16, padding: "12px 20px", marginBottom: "10px" }}
+			>
+				Test Tauri Communication
+			</button>
 			<button
 				type="button"
 				onClick={handlePrint2}
