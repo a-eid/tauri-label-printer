@@ -19,11 +19,11 @@ const PAD_RIGHT: u32 = 10;
 const FONT_PX: f32 = 52.0;         // even larger for better readability
 const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
 
-const DARKNESS: u8 = 6;            // D0..D15 (tuned to reduce banding)
-const SPEED: u8 = 3;               // S1..S6
+const DARKNESS: u8 = 8;            // D0..D15 (darker for better contrast like reference)
+const SPEED: u8 = 2;               // S1..S6 (slower for better quality)
 
-const NARROW: u32 = 3;             // EAN13 module width (increased for better scanning)
-const HEIGHT: u32 = 60;            // barcode bar height (increased for better scanning)
+const NARROW: u32 = 2;             // EAN13 module width (back to 2 like reference)
+const HEIGHT: u32 = 80;            // barcode bar height (taller like reference)
 
 const FORCE_LANDSCAPE: bool = false; // Driver should be Portrait
 const INVERT_BITS: bool = true;      // Invert GW bits for black-on-white
@@ -79,16 +79,16 @@ pub fn build_two_product_label(
 
     // Always portrait mode - both products on same label
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
-    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},N,\"{}\"",
-        bx, bc1_y, NARROW, NARROW, HEIGHT, bc1));
+    epl_line(&mut buf, &format!("B{},{},0,1A,{},{},{},N,\"{}\"",
+        bx, bc1_y, NARROW, NARROW*2, HEIGHT, bc1));
 
     // Dotted separator line between products (moved down ~2-3mm)
     let separator_y = bc1_y + HEIGHT + 32;  // ~1/4 cm more space
     draw_dotted_line(&mut buf, 20, separator_y, LABEL_W - 40);
 
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
-    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},N,\"{}\"",
-        bx, bc2_y, NARROW, NARROW, HEIGHT, bc2));
+    epl_line(&mut buf, &format!("B{},{},0,1A,{},{},{},N,\"{}\"",
+        bx, bc2_y, NARROW, NARROW*2, HEIGHT, bc2));
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
     buf
