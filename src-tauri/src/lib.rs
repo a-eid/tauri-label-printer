@@ -9,6 +9,12 @@ struct Product {
 }
 
 #[tauri::command]
+fn print_simple_test() -> Result<String, String> {
+    println!("print_simple_test called!");
+    Ok("Print function works!".to_string())
+}
+
+#[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
@@ -75,7 +81,7 @@ fn print_sample_label() -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, print_label, print_sample_label])
+        .invoke_handler(tauri::generate_handler![greet, print_simple_test, print_label, print_sample_label])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }// Cross-OS printer sink: real spool on Windows, temp file elsewhere

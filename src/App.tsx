@@ -14,6 +14,18 @@ export default function App() {
 		}
 	};
 
+	const handleSimplePrint = async () => {
+		try {
+			console.log("Testing simple print function...");
+			const result = await invoke("print_simple_test");
+			console.log("Simple print result:", result);
+			alert("Simple print works! Result: " + result);
+		} catch (error) {
+			console.error("Simple print failed:", error);
+			alert("Simple print error: " + error);
+		}
+	};
+
 	const handlePrint2 = async () => {
 		try {
 			console.log("Attempting to print 2 products...");
@@ -69,6 +81,13 @@ export default function App() {
 				style={{ fontSize: 16, padding: "12px 20px", marginBottom: "10px" }}
 			>
 				Test Tauri Communication
+			</button>
+			<button
+				type="button"
+				onClick={handleSimplePrint}
+				style={{ fontSize: 16, padding: "12px 20px", marginBottom: "10px" }}
+			>
+				Test Simple Print Function
 			</button>
 			<button
 				type="button"
