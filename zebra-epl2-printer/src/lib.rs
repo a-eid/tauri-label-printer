@@ -75,15 +75,15 @@ pub fn build_two_product_label(
 
     // Always portrait mode - both products on same label
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
-    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
+    epl_line(&mut buf, &format!("B{},{},0,1A,{},{},+{},B,\"{}\"",
         bx, bc1_y, NARROW, 4, HEIGHT, barcode1));
 
-    // Dotted separator line between products
-    let separator_y = bc1_y + HEIGHT + 15;
+    // Dotted separator line between products (after first barcode HRI)
+    let separator_y = bc1_y + HEIGHT + 25;  // After HRI space
     draw_dotted_line(&mut buf, 20, separator_y, LABEL_W - 40);
 
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
-    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
+    epl_line(&mut buf, &format!("B{},{},0,1A,{},{},+{},B,\"{}\"",
         bx, bc2_y, NARROW, 4, HEIGHT, barcode2));
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
