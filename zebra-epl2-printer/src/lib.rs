@@ -107,17 +107,16 @@ pub fn build_four_product_label(
     let text4_y = text3_y; 
     let bc4_y = bc3_y;
 
-    // Barcode centering for each column with gap - shift right by 2 pixels
-    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 2;
-    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 2;
+    // Barcode centering for each column with gap - shift right by 5 pixels for HRI numbers
+    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 5;
+    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 5;
 
     let mut buf = Vec::<u8>::new();
-    epl_line(&mut buf, "N");  
+    // Minimal EPL2 sequence - remove commands that might cause label advance
     epl_line(&mut buf, &format!("q{}", LABEL_W));
-    epl_line(&mut buf, &format!("Q{},24", LABEL_H));  
+    epl_line(&mut buf, &format!("Q{}", LABEL_H));  // Remove gap setting completely
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
-    epl_line(&mut buf, "ZT");  // Set tear-off mode to prevent auto form feed
 
     // Top row: Product 1 (left) and Product 2 (right)
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
@@ -143,8 +142,8 @@ pub fn build_four_product_label(
     // Remove vertical separator - just use column spacing
     // draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
-    epl_line(&mut buf, "P1");  // Print exactly ONE label
-    buf.extend_from_slice(b"\x1A");  // Add SUB character to properly terminate job
+    epl_line(&mut buf, "P1");  // Print exactly ONE label  
+    // Remove SUB termination that might cause issues
     buf
 }
 
