@@ -16,7 +16,7 @@ const LABEL_W: u32 = 440;          // dots (≈55 mm)
 const LABEL_H: u32 = 320;          // dots (≈40 mm)
 const PAD_RIGHT: u32 = 10;
 
-const FONT_PX: f32 = 28.0;         // smaller for 4-product layout
+const FONT_PX: f32 = 36.0;         // larger for better readability in 4-product layout
 const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
 
 const DARKNESS: u8 = 8;            // D0..D15 (darker for better contrast like reference)
@@ -133,22 +133,22 @@ pub fn build_four_product_label(
     // Equal quadrants: 440÷2=220 width, 320÷2=160 height per quadrant
     let quad_w = LABEL_W / 2;  // 220 dots per column
     let quad_h = LABEL_H / 2;  // 160 dots per row
-    let pad = 8;               // Padding from edges
     let gap = 4;               // Small gap between quadrants
+    let grid_offset_y = 20;    // Move entire grid down by 20 pixels
     
     // Quadrant boundaries with gap:
     // Left column: 0 to (220-gap/2), Right column: (220+gap/2) to 440
-    // Top row: 0 to (160-gap/2), Bottom row: (160+gap/2) to 320
+    // Top row: grid_offset_y to (160-gap/2+offset), Bottom row: (160+gap/2+offset) to 320
     
-    // Right-align text within each quadrant
-    let x1 = quad_w - gap/2 - pad - w1;                    // Top-left quadrant
-    let x2 = quad_w + gap/2 + quad_w - pad - w2;           // Top-right quadrant  
-    let x3 = quad_w - gap/2 - pad - w3;                    // Bottom-left quadrant
-    let x4 = quad_w + gap/2 + quad_w - pad - w4;           // Bottom-right quadrant
+    // Center text horizontally within each quadrant
+    let x1 = (quad_w - gap/2 - w1) / 2;                    // Center in top-left quadrant
+    let x2 = quad_w + gap/2 + (quad_w - w2) / 2;           // Center in top-right quadrant  
+    let x3 = (quad_w - gap/2 - w3) / 2;                    // Center in bottom-left quadrant
+    let x4 = quad_w + gap/2 + (quad_w - w4) / 2;           // Center in bottom-right quadrant
     
-    // Center content vertically within each quadrant
-    let quad1_center_y = quad_h / 2;                       // ~80 (center of top row)
-    let quad3_center_y = quad_h + gap/2 + quad_h / 2;      // ~240 (center of bottom row)
+    // Center content vertically within each quadrant (shifted down)
+    let quad1_center_y = grid_offset_y + quad_h / 2;                       // ~100 (center of top row)
+    let quad3_center_y = grid_offset_y + quad_h + gap/2 + quad_h / 2;      // ~260 (center of bottom row)
     
     // Position text and barcodes centered in each quadrant
     let text1_y = quad1_center_y - (h1 + HEIGHT + 8) / 2;  // Center in top-left
