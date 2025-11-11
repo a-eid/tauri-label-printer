@@ -16,22 +16,22 @@ const LABEL_W: u32 = 440;          // dots (≈55 mm)
 const LABEL_H: u32 = 320;          // dots (≈40 mm)
 const PAD_RIGHT: u32 = 10;
 
-const FONT_PX: f32 = 52.0;         // even larger for better readability
+const FONT_PX: f32 = 28.0;         // smaller for 4-product layout
 const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
 
 const DARKNESS: u8 = 8;            // D0..D15 (darker for better contrast like reference)
 const SPEED: u8 = 2;               // S1..S6 (slower for better quality)
 
 const NARROW: u32 = 2;             // EAN13 module width (back to 2 like reference)
-const HEIGHT: u32 = 50;            // barcode bar height (reduced to fit)
+const HEIGHT: u32 = 35;            // barcode bar height (smaller for 4-product layout)
 
 const FORCE_LANDSCAPE: bool = false; // Driver should be Portrait
 const INVERT_BITS: bool = true;      // Invert GW bits for black-on-white
 
 // ======== Public API ========
 
-/// Build a single EPL2 print job for two products.
-/// - `font_bytes`: embedded Arabic font bytes (e.g., Amiri-Regular.ttf or NotoNaskhArabic-Regular.ttf)
+/// Build a single EPL2 print job for two products (legacy function).
+/// - `font_bytes`: embedded Arabic font bytes 
 /// - `name1/price1/barcode1` + `name2/price2/barcode2`
 /// Returns raw bytes ready to send to the printer (USB raw write).
 pub fn build_two_product_label(
@@ -39,36 +39,76 @@ pub fn build_two_product_label(
     name1: &str, price1: &str, barcode1: &str,
     name2: &str, price2: &str, barcode2: &str,
 ) -> Vec<u8> {
+    // For now, call the 4-product function with duplicate data
+    build_four_product_label(
+        font_bytes,
+        name1, price1, barcode1,
+        name2, price2, barcode2,
+        name1, price1, barcode1, // Duplicate first product
+        name2, price2, barcode2, // Duplicate second product
+    )
+}
+
+/// Build a single EPL2 print job for four products in 2x2 grid.
+/// - `font_bytes`: embedded Arabic font bytes 
+/// - Four sets of `name/price/barcode` for each quadrant
+/// Returns raw bytes ready to send to the printer (USB raw write).
+pub fn build_four_product_label(
+    font_bytes: &[u8],
+    name1: &str, price1: &str, barcode1: &str,
+    name2: &str, price2: &str, barcode2: &str,
+    name3: &str, price3: &str, barcode3: &str,
+    name4: &str, price4: &str, barcode4: &str,
+) -> Vec<u8> {
     // Compose Arabic lines with currency "ج.م"
-    let t1 = format!("{}    {} {}", name1, price1, "ج.م");
-    let t2 = format!("{}    {} {}", name2, price2, "ج.م");
+    let t1 = format!("{}  {} {}", name1, price1, "ج.م");
+    let t2 = format!("{}  {} {}", name2, price2, "ج.م");
+    let t3 = format!("{}  {} {}", name3, price3, "ج.م");
+    let t4 = format!("{}  {} {}", name4, price4, "ج.م");
 
     // Ensure barcodes are valid EAN-13 format
     let bc1 = ensure_valid_ean13(barcode1);
     let bc2 = ensure_valid_ean13(barcode2);
+    let bc3 = ensure_valid_ean13(barcode3);
+    let bc4 = ensure_valid_ean13(barcode4);
 
-    // Render tight, bold, 1-bit Arabic lines
-    let mut im1 = render_arabic_line_tight_1bit(&t1, font_bytes, FONT_PX, 3, BOLD_STROKE);
-    let mut im2 = render_arabic_line_tight_1bit(&t2, font_bytes, FONT_PX, 3, BOLD_STROKE);
-
-    // No rotation needed - driver should be in Portrait mode
-    // if FORCE_LANDSCAPE { im1 = rotate90(&im1); im2 = rotate90(&im2); }
+    // Render smaller Arabic lines for 2x2 layout
+    let im1 = render_arabic_line_tight_1bit(&t1, font_bytes, FONT_PX, 2, BOLD_STROKE);
+    let im2 = render_arabic_line_tight_1bit(&t2, font_bytes, FONT_PX, 2, BOLD_STROKE);
+    let im3 = render_arabic_line_tight_1bit(&t3, font_bytes, FONT_PX, 2, BOLD_STROKE);
+    let im4 = render_arabic_line_tight_1bit(&t4, font_bytes, FONT_PX, 2, BOLD_STROKE);
 
     let (w1,h1,r1) = image_to_row_bytes(&im1);
     let (w2,h2,r2) = image_to_row_bytes(&im2);
+    let (w3,h3,r3) = image_to_row_bytes(&im3);
+    let (w4,h4,r4) = image_to_row_bytes(&im4);
 
-    // Right-align text images (tight width → no gray band)
-    let x1 = LABEL_W - PAD_RIGHT - w1;
-    let x2 = LABEL_W - PAD_RIGHT - w2;
+    // 2x2 grid layout calculations
+    let half_w = LABEL_W / 2;        // 220 dots per column
+    let half_h = LABEL_H / 2;        // 160 dots per row
+    let pad = 5;
+    
+    // Quadrant positions (text right-aligned in each half)
+    let x1 = half_w - pad - w1;      // Top-left text
+    let x2 = LABEL_W - pad - w2;     // Top-right text  
+    let x3 = half_w - pad - w3;      // Bottom-left text
+    let x4 = LABEL_W - pad - w4;     // Bottom-right text
+    
+    // Y positions for each row
+    let text1_y = 8;
+    let bc1_y = text1_y + h1 + 5;
+    let text3_y = half_h + 8;
+    let bc3_y = text3_y + h3 + 5;
+    
+    // Same Y for right column
+    let text2_y = text1_y;
+    let bc2_y = bc1_y;
+    let text4_y = text3_y; 
+    let bc4_y = bc3_y;
 
-    // Y layout with space for HRI - both products on ONE label
-    let text1_y = 10;
-    let bc1_y   = text1_y + h1 + 8;
-    let text2_y = bc1_y   + HEIGHT + 35;  // More spacing to avoid overlap
-    let bc2_y   = text2_y + h2 + 8;
-
-    // Center EAN-13 (95 modules)
-    let bx = center_x_for_ean13(LABEL_W, NARROW);
+    // Barcode centering for each column
+    let bc_left_x = center_x_for_ean13_column(half_w, NARROW);
+    let bc_right_x = half_w + center_x_for_ean13_column(half_w, NARROW);
 
     let mut buf = Vec::<u8>::new();
     epl_line(&mut buf, "N");
@@ -77,18 +117,29 @@ pub fn build_two_product_label(
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
-    // Always portrait mode - both products on same label
+    // Top row: Product 1 (left) and Product 2 (right)
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
-        bx, bc1_y, NARROW, 3, HEIGHT, bc1));
-
-    // Dotted separator line between products (moved down ~2-3mm)
-    let separator_y = bc1_y + HEIGHT + 37;  // More space for HRI numbers
-    draw_dotted_line(&mut buf, 20, separator_y, LABEL_W - 40);
-
+        bc_left_x, bc1_y, NARROW, 3, HEIGHT, bc1));
+        
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
-        bx, bc2_y, NARROW, 3, HEIGHT, bc2));
+        bc_right_x, bc2_y, NARROW, 3, HEIGHT, bc2));
+
+    // Horizontal separator line 
+    draw_solid_line(&mut buf, 10, half_h - 2, LABEL_W - 20);
+    
+    // Bottom row: Product 3 (left) and Product 4 (right)
+    gw_bytes(&mut buf, x3, text3_y, w3, h3, &r3);
+    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
+        bc_left_x, bc3_y, NARROW, 3, HEIGHT, bc3));
+        
+    gw_bytes(&mut buf, x4, text4_y, w4, h4, &r4);
+    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
+        bc_right_x, bc4_y, NARROW, 3, HEIGHT, bc4));
+
+    // Vertical separator line
+    draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
     buf
@@ -209,6 +260,25 @@ fn gw_bytes(buf:&mut Vec<u8>, x:u32, y:u32, w:u32, h:u32, rows:&[u8]) {
 fn center_x_for_ean13(label_w: u32, narrow: u32) -> u32 {
     let w = 95 * narrow; // EAN-13 total width (95 modules)
     (label_w - w) / 2
+}
+
+fn center_x_for_ean13_column(column_w: u32, narrow: u32) -> u32 {
+    let w = 95 * narrow; // EAN-13 total width (95 modules)
+    (column_w - w) / 2
+}
+
+fn draw_solid_line(buf: &mut Vec<u8>, start_x: u32, y: u32, width: u32) {
+    // Draw solid line using EPL LO command 
+    epl_line(buf, &format!("LO{},{},1,{}", start_x, y, width));
+}
+
+fn draw_vertical_line(buf: &mut Vec<u8>, x: u32, start_y: u32, height: u32) {
+    // Draw vertical line using EPL LO command
+    epl_line(buf, &format!("LO{},{},1,1", x, start_y)); // Just a thin vertical line
+    // For thicker vertical line, repeat with slight offset
+    for i in 0..height {
+        epl_line(buf, &format!("LO{},{},1,1", x, start_y + i));
+    }
 }
 
 fn draw_dotted_line(buf: &mut Vec<u8>, start_x: u32, y: u32, width: u32) {
