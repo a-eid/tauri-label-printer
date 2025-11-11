@@ -79,15 +79,15 @@ pub fn build_two_product_label(
 
     // Always portrait mode - both products on same label
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
-    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},N,\"{}\"",
+    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bx, bc1_y, NARROW, 3, HEIGHT, bc1));
 
     // Dotted separator line between products (moved down ~2-3mm)
-    let separator_y = bc1_y + HEIGHT + 32;  // ~1/4 cm more space
+    let separator_y = bc1_y + HEIGHT + 37;  // More space for HRI numbers
     draw_dotted_line(&mut buf, 20, separator_y, LABEL_W - 40);
 
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
-    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},N,\"{}\"",
+    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bx, bc2_y, NARROW, 3, HEIGHT, bc2));
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
