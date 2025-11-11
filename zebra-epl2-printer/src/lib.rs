@@ -118,6 +118,7 @@ pub fn build_four_product_label(
     let bc2 = ensure_valid_ean13(barcode2);
     let bc3 = ensure_valid_ean13(barcode3);
     let bc4 = ensure_valid_ean13(barcode4);
+    
 
     // Render smaller Arabic lines for 2x2 layout
     let im1 = render_arabic_line_tight_1bit(&t1, font_bytes, FONT_PX, 2, BOLD_STROKE);
