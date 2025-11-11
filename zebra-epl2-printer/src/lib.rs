@@ -5,7 +5,7 @@
 //! - Compensates driver Landscape by rotating in code
 //! - Centers EAN-13 barcodes and keeps HRI visible
 
-use image::{ImageBuffer, Luma, DynamicImage};
+use image::{ImageBuffer, Luma};
 use rusttype::{Font, Scale, point};
 use ar_reshaper::{ArabicReshaper, ReshaperConfig};
 use unicode_bidi::BidiInfo;
@@ -14,7 +14,6 @@ use unicode_bidi::BidiInfo;
 
 const LABEL_W: u32 = 440;          // dots (≈55 mm)
 const LABEL_H: u32 = 320;          // dots (≈40 mm)
-const PAD_RIGHT: u32 = 10;
 
 const FONT_PX: f32 = 36.0;         // larger for better readability in 4-product layout
 const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
@@ -25,7 +24,6 @@ const SPEED: u8 = 2;               // S1..S6 (slower for better quality)
 const NARROW: u32 = 2;             // EAN13 module width (back to 2 like reference)
 const HEIGHT: u32 = 35;            // barcode bar height (smaller for 4-product layout)
 
-const FORCE_LANDSCAPE: bool = false; // Driver should be Portrait
 const INVERT_BITS: bool = true;      // Invert GW bits for black-on-white
 
 // ======== Public API ========
@@ -61,8 +59,8 @@ pub fn build_two_product_label_with_brand(
         let w = (text_w + 4).max(2);
         let mut img = image::ImageBuffer::from_pixel(w, line_h, Luma([255]));
         let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0),(0,1)]; // quad-draw for extra boldness
-        for (dx, dy) in passes {
-            for g in font.layout(&visual, scale, rusttype::point(2.0 + *dx as f32, ascent + *dy as f32)) {
+        for &(_dx, _dy) in passes {
+            for g in font.layout(&visual, scale, rusttype::point(2.0 + _dx as f32, ascent + _dy as f32)) {
                 if let Some(bb) = g.pixel_bounding_box() {
                     g.draw(|x, y, v| {
                         if v > 0.5 { // Lower threshold for crisper rendering (was 0.65)
@@ -85,7 +83,6 @@ pub fn build_two_product_label_with_brand(
 
     // Layout: two vertical halves
     let half_h = LABEL_H / 2;  // 160 dots per half
-    let pad = 10;
 
     // Center brand horizontally in each half
     let brand_x = (LABEL_W - brand_w) / 2;
@@ -146,11 +143,8 @@ pub fn build_four_product_label_with_brand(
     let bc2 = ensure_valid_ean13(barcode2);
     let bc3 = ensure_valid_ean13(barcode3);
     let bc4 = ensure_valid_ean13(barcode4);
-    
 
-    // Render brand (extra bold, large size)
-    let brand_img = render_arabic_line_tight_1bit(brand, font_bytes, 40.0, 2, true);
-    // Quad-draw for extra boldness
+    // Render brand (extra bold, large size) with quad-draw for extra boldness
     let brand_img = {
         let font = rusttype::Font::try_from_bytes(font_bytes).expect("bad font");
         let reshaper = ar_reshaper::ArabicReshaper::new(ar_reshaper::ReshaperConfig::default());
@@ -167,8 +161,8 @@ pub fn build_four_product_label_with_brand(
         let w = (text_w + 4).max(2);
         let mut img = image::ImageBuffer::from_pixel(w, line_h, Luma([255]));
         let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0),(0,1)]; // quad-draw for extra boldness
-        for (dx, dy) in passes {
-            for g in font.layout(&visual, scale, rusttype::point(2.0 + *dx as f32, ascent + *dy as f32)) {
+        for &(_dx, _dy) in passes {
+            for g in font.layout(&visual, scale, rusttype::point(2.0 + _dx as f32, ascent + _dy as f32)) {
                 if let Some(bb) = g.pixel_bounding_box() {
                     g.draw(|x, y, v| {
                         if v > 0.5 { // Lower threshold for crisper rendering (was 0.65)
@@ -359,7 +353,7 @@ fn render_name_price_space_between(
     
     // Draw name on the right (x = total_w - name_w)
     let name_x = total_w - name_w;
-    for (dx, dy) in passes {
+    for &(_dx, _dy) in passes {
         for g in font.layout(&name_visual, scale, point(0.0, ascent)) {
             if let Some(bb) = g.pixel_bounding_box() {
                 g.draw(|x, y, v| {
@@ -374,54 +368,6 @@ fn render_name_price_space_between(
     }
     
     image_to_row_bytes(&img)
-}
-
-/// Render tight 1-bit Arabic line; optional 1-px stroke for bold.
-fn render_arabic_line_tight_1bit(
-    text: &str,
-    font_bytes: &[u8],
-    font_px: f32,
-    pad_lr: u32,
-    bold: bool,
-) -> ImageBuffer<Luma<u8>, Vec<u8>> {
-    let font = Font::try_from_bytes(font_bytes).expect("bad font");
-    let reshaper = ArabicReshaper::new(ReshaperConfig::default());
-    let visual = bidi_then_shape(text, &reshaper);
-
-    let scale = Scale { x: font_px, y: font_px };
-    let vm = font.v_metrics(scale);
-    let ascent = vm.ascent.ceil();
-    let descent = vm.descent.floor();
-    let line_h = (ascent - descent).ceil().max(30.0) as u32;
-
-    // Measure tight width
-    let glyphs: Vec<_> = font.layout(&visual, scale, point(0.0, ascent)).collect();
-    let text_w = glyphs.iter().rev()
-        .find_map(|g| g.pixel_bounding_box().map(|bb| bb.max.x as f32))
-        .unwrap_or(0.0).ceil() as u32;
-
-    let w = (text_w + pad_lr * 2).max(2);
-    let mut img = ImageBuffer::from_pixel(w, line_h, Luma([255]));
-
-    let passes: &[(i32,i32)] = if bold { &[(0,0),(1,0)] } else { &[(0,0)] };
-    for (dx, dy) in passes {
-        for g in font.layout(&visual, scale, point(pad_lr as f32 + *dx as f32, ascent + *dy as f32)) {
-            if let Some(bb) = g.pixel_bounding_box() {
-                g.draw(|x, y, v| {
-                    if v > 0.5 { // Lower threshold for crisper rendering (was 0.65)
-                        let px = x + bb.min.x as u32;
-                        let py = y + bb.min.y as u32;
-                        if px < w && py < line_h { img.put_pixel(px, py, Luma([0])); }
-                    }
-                });
-            }
-        }
-    }
-    img
-}
-
-fn rotate90(img: &ImageBuffer<Luma<u8>, Vec<u8>>) -> ImageBuffer<Luma<u8>, Vec<u8>> {
-    DynamicImage::ImageLuma8(img.clone()).rotate90().to_luma8()
 }
 
 // ======== EPL2 helpers (binary GW + CRLF, optional invert) ========
@@ -455,13 +401,6 @@ fn gw_bytes(buf:&mut Vec<u8>, x:u32, y:u32, w:u32, h:u32, rows:&[u8]) {
     buf.extend_from_slice(b"\r\n");
 }
 
-// ======== Utility ========
-
-fn center_x_for_ean13(label_w: u32, narrow: u32) -> u32 {
-    let w = 95 * narrow; // EAN-13 total width (95 modules)
-    (label_w - w) / 2
-}
-
 fn center_x_for_ean13_single(label_w: u32, narrow: u32) -> u32 {
     let w = 95 * narrow; // EAN-13 total width (95 modules)
     (label_w - w) / 2
@@ -470,34 +409,6 @@ fn center_x_for_ean13_single(label_w: u32, narrow: u32) -> u32 {
 fn center_x_for_ean13_column(column_w: u32, narrow: u32) -> u32 {
     let w = 95 * narrow; // EAN-13 total width (95 modules)
     (column_w - w) / 2
-}
-
-fn draw_solid_line(buf: &mut Vec<u8>, start_x: u32, y: u32, width: u32) {
-    // Draw solid line using EPL LO command 
-    epl_line(buf, &format!("LO{},{},1,{}", start_x, y, width));
-}
-
-fn draw_vertical_line(buf: &mut Vec<u8>, x: u32, start_y: u32, height: u32) {
-    // Draw vertical line using EPL LO command
-    epl_line(buf, &format!("LO{},{},1,1", x, start_y)); // Just a thin vertical line
-    // For thicker vertical line, repeat with slight offset
-    for i in 0..height {
-        epl_line(buf, &format!("LO{},{},1,1", x, start_y + i));
-    }
-}
-
-fn draw_dotted_line(buf: &mut Vec<u8>, start_x: u32, y: u32, width: u32) {
-    // Draw dotted line using EPL LO command (Line Oblique)
-    let dot_length = 8;  // Length of each dot segment
-    let gap_length = 6;  // Gap between dots
-    let total_pattern = dot_length + gap_length;
-    
-    let mut x = start_x;
-    while x + dot_length < start_x + width {
-        // LO command: LO x,y,thickness,width
-        epl_line(buf, &format!("LO{},{},1,{}", x, y, dot_length));
-        x += total_pattern;
-    }
 }
 
 // Ensure barcode is valid 12-digit EAN-13 (without check digit)
