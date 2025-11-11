@@ -94,8 +94,8 @@ pub fn build_two_product_label_with_brand(
 
     // Center brand horizontally in each half
     let brand_x = (LABEL_W - brand_w) / 2;
-    let brand_y1 = 10;
-    let brand_y2 = half_h + 10;
+    let brand_y1 = 8;  // shifted up by 2px (was 10)
+    let brand_y2 = half_h + 8;  // shifted up by 2px (was half_h + 10)
 
     // Center product text horizontally
     let x1 = (LABEL_W - w1) / 2;
@@ -105,9 +105,9 @@ pub fn build_two_product_label_with_brand(
     let brand_to_text_gap: i32 = -6; // further tighten: negative gap pulls product info closer to brand
     let row_gap: i32 = 4; // 4px between the two rows
     let text1_y = (brand_y1 as i32 + brand_h as i32 + brand_to_text_gap).max(0) as u32;
-    let bc1_y = (text1_y as i32 + h1 as i32 + 8).max(0) as u32;
+    let bc1_y = (text1_y as i32 + h1 as i32 + 4).max(0) as u32;  // reduced gap by 4px (was 8)
     let text2_y = (brand_y2 as i32 + brand_h as i32 + brand_to_text_gap + row_gap).max(0) as u32;
-    let bc2_y = (text2_y as i32 + h2 as i32 + 8).max(0) as u32;
+    let bc2_y = (text2_y as i32 + h2 as i32 + 4).max(0) as u32;  // reduced gap by 4px (was 8)
 
     let bx_center = center_x_for_ean13_single(LABEL_W, NARROW);
 
@@ -209,8 +209,8 @@ pub fn build_four_product_label_with_brand(
     // Equal quadrants: 440÷2=220 width, 320÷2=160 height per quadrant
     let quad_w = LABEL_W / 2;  // 220 dots per column
     let quad_h = LABEL_H / 2;  // 160 dots per row
-    let gap = 4;               // Small gap between quadrants
-    let grid_offset_y = 20;    // Move entire grid down by 20 pixels
+    let gap = -2;              // Horizontal gap between quadrants (negative to overlap slightly, reducing space by 6px from original 4)
+    let grid_offset_y = 18;    // Move entire grid down (shifted up by 2px from 20)
     
     // Quadrant boundaries with gap:
     // Left column: 0 to (220-gap/2), Right column: (220+gap/2) to 440
