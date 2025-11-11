@@ -14,19 +14,19 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn print_label(printer: String, brand: Option<String>, products: Vec<Product>) -> Result<(), String> {
+fn print_label(printer: String, title: Option<String>, products: Vec<Product>) -> Result<(), String> {
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let brand_str = brand.as_deref().unwrap_or("اسواق ابو عمر");
+    let title_str = title.as_deref().unwrap_or("اسواق ابو عمر");
     let data = match products.len() {
         2 => zebra_epl2_printer::build_two_product_label_with_brand(
             font,
-            brand_str,
+            title_str,
             &products[0].name, &products[0].price, &products[0].barcode,
             &products[1].name, &products[1].price, &products[1].barcode,
         ),
         4 => zebra_epl2_printer::build_four_product_label_with_brand(
             font,
-            brand_str,
+            title_str,
             &products[0].name, &products[0].price, &products[0].barcode,
             &products[1].name, &products[1].price, &products[1].barcode,
             &products[2].name, &products[2].price, &products[2].barcode,
