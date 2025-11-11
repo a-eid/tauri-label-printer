@@ -107,14 +107,18 @@ pub fn build_four_product_label(
     let text4_y = text3_y; 
     let bc4_y = bc3_y;
 
-    // Barcode centering for each column with gap - shift right by 5 pixels for HRI numbers
-    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 5;
-    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 5;
+    // Barcode centering for each column with gap - shift right by 7 pixels for HRI numbers
+    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 7;
+    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 7;
+
+    // Calculate actual content height to prevent extra label advance
+    let max_content_y = bc4_y + HEIGHT + 20;  // Bottom barcode + height + padding
+    let actual_label_h = max_content_y.min(LABEL_H);  // Don't exceed label bounds
 
     let mut buf = Vec::<u8>::new();
-    // Minimal EPL2 sequence - remove commands that might cause label advance
+    // Use actual content height instead of full label height
     epl_line(&mut buf, &format!("q{}", LABEL_W));
-    epl_line(&mut buf, &format!("Q{}", LABEL_H));  // Remove gap setting completely
+    epl_line(&mut buf, &format!("Q{}", actual_label_h));  // Use calculated height
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
