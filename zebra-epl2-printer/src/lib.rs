@@ -22,8 +22,8 @@ const BOLD_STROKE: bool = true;    // draw twice w/ 1px offset
 const DARKNESS: u8 = 6;            // D0..D15 (tuned to reduce banding)
 const SPEED: u8 = 3;               // S1..S6
 
-const NARROW: u32 = 2;             // EAN13 module width (2–3)
-const HEIGHT: u32 = 50;            // barcode bar height
+const NARROW: u32 = 3;             // EAN13 module width (increased for better scanning)
+const HEIGHT: u32 = 60;            // barcode bar height (increased for better scanning)
 
 const FORCE_LANDSCAPE: bool = false; // Driver should be Portrait
 const INVERT_BITS: bool = true;      // Invert GW bits for black-on-white
@@ -80,7 +80,7 @@ pub fn build_two_product_label(
     // Always portrait mode - both products on same label
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
     epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},N,\"{}\"",
-        bx, bc1_y, NARROW, 4, HEIGHT, bc1));
+        bx, bc1_y, NARROW, NARROW, HEIGHT, bc1));
 
     // Dotted separator line between products (moved down ~2-3mm)
     let separator_y = bc1_y + HEIGHT + 32;  // ~1/4 cm more space
@@ -88,7 +88,7 @@ pub fn build_two_product_label(
 
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
     epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},N,\"{}\"",
-        bx, bc2_y, NARROW, 4, HEIGHT, bc2));
+        bx, bc2_y, NARROW, NARROW, HEIGHT, bc2));
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
     buf
@@ -207,7 +207,7 @@ fn gw_bytes(buf:&mut Vec<u8>, x:u32, y:u32, w:u32, h:u32, rows:&[u8]) {
 // ======== Utility ========
 
 fn center_x_for_ean13(label_w: u32, narrow: u32) -> u32 {
-    let w = 95 * narrow as u32; // EAN-13 modules
+    let w = 95 * narrow; // EAN-13 total width (95 modules)
     (label_w - w) / 2
 }
 
