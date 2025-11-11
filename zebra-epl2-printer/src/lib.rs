@@ -113,7 +113,7 @@ pub fn build_four_product_label(
     let mut buf = Vec::<u8>::new();
     epl_line(&mut buf, "N");
     epl_line(&mut buf, &format!("q{}", LABEL_W));
-    epl_line(&mut buf, &format!("Q{},24", LABEL_H));
+    epl_line(&mut buf, &format!("Q{}", LABEL_H));  // Remove the ",24" gap setting
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
@@ -141,8 +141,7 @@ pub fn build_four_product_label(
     // Vertical separator line
     draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
-    // End job without extra CRLF to prevent blank label
-    buf.extend_from_slice(b"P1");
+    epl_line(&mut buf, "P1");  // Print exactly ONE label
     buf
 }
 
