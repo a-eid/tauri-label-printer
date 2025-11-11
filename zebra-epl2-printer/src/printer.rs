@@ -65,3 +65,75 @@ pub fn send_raw_to_printer(printer_name: &str, data: &[u8]) -> Result<(), Box<dy
         Err(Box::<dyn Error>::from("send_raw_to_printer is only supported on Windows (uses Win32 spooler)"))
     }
 }
+
+/// List installed printers (Windows only). On other platforms returns an empty list.
+pub fn list_printers() -> Result<Vec<String>, Box<dyn Error>> {
+    #[cfg(target_os = "windows")]
+    {
+        use std::ffi::OsString;
+        use std::os::windows::ffi::OsStringExt;
+        use std::ptr::null_mut;
+        use winapi::shared::minwindef::DWORD;
+        use winapi::um::winspool::*;
+
+        unsafe {
+            let mut bytes_needed: DWORD = 0;
+            let mut printers_returned: DWORD = 0;
+
+            // First call to get required buffer size
+            EnumPrintersW(
+                PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
+                null_mut(),
+                4,
+                null_mut(),
+                0,
+                &mut bytes_needed,
+                &mut printers_returned,
+            );
+
+            if bytes_needed == 0 {
+                return Ok(Vec::new());
+            }
+
+            let mut buffer: Vec<u8> = vec![0u8; bytes_needed as usize];
+            let ok = EnumPrintersW(
+                PRINTER_ENUM_LOCAL | PRINTER_ENUM_CONNECTIONS,
+                null_mut(),
+                4,
+                buffer.as_mut_ptr(),
+                bytes_needed,
+                &mut bytes_needed,
+                &mut printers_returned,
+            );
+            if ok == 0 {
+                return Err("EnumPrintersW failed".into());
+            }
+
+            let mut result = Vec::new();
+            let printer_info_ptr = buffer.as_ptr() as *const PRINTER_INFO_4W;
+            for i in 0..printers_returned as isize {
+                let info = printer_info_ptr.offset(i).as_ref().unwrap();
+                if !info.pPrinterName.is_null() {
+                    // Read wide string until null terminator
+                    let mut len = 0;
+                    loop {
+                        let ch = *info.pPrinterName.offset(len);
+                        if ch == 0 { break; }
+                        len += 1;
+                    }
+                    let slice = std::slice::from_raw_parts(info.pPrinterName, len as usize);
+                    let os = OsString::from_wide(slice);
+                    if let Some(s) = os.to_str() {
+                        result.push(s.to_string());
+                    }
+                }
+            }
+            Ok(result)
+        }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        Ok(Vec::new())
+    }
+}

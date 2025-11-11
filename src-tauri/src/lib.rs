@@ -59,6 +59,11 @@ fn print_label(printer: String, brand_name: String, products: Vec<Product>) -> R
 }
 
 #[tauri::command]
+fn list_printers() -> Result<Vec<String>, String> {
+    zebra_epl2_printer::list_printers().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn print_sample_label() -> Result<(), String> {
     // Test with the original 2-product function to see if it has the same issue
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
@@ -81,13 +86,20 @@ fn print_sample_label() -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, print_simple_test, print_label, print_sample_label])
+        .invoke_handler(tauri::generate_handler![greet, print_simple_test, print_label, print_sample_label, list_printers])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }// Cross-OS printer sink: real spool on Windows, temp file elsewhere
 fn send_to_printer_cross_os(_printer: &str, data: &[u8]) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
+        // Always write a debug copy to temp for diagnostics
+        let path = std::env::temp_dir().join("last_epl_windows.bin");
+        if let Err(e) = std::fs::write(&path, data) {
+            println!("Failed to write Windows debug EPL file {}: {}", path.display(), e);
+        } else {
+            println!("Wrote Windows debug EPL file: {} ({} bytes)", path.display(), data.len());
+        }
         return zebra_epl2_printer::send_raw_to_printer(_printer, data).map_err(|e| e.to_string());
     }
     #[cfg(not(target_os = "windows"))]

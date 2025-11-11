@@ -397,4 +397,4 @@ fn ensure_valid_ean13(barcode: &str) -> String {
 pub mod printer;
 
 #[cfg(target_os = "windows")]
-pub use printer::send_raw_to_printer;
+pub use printer::{send_raw_to_printer, list_printers};
