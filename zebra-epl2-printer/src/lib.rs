@@ -164,9 +164,6 @@ pub fn build_four_product_label(
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bc_right_x, bc2_y, NARROW, 3, HEIGHT, bc2));
 
-    // Horizontal separator line 
-    draw_solid_line(&mut buf, 10, half_h - 2, LABEL_W - 20);
-    
     // Bottom row: Product 3 (left) and Product 4 (right)
     gw_bytes(&mut buf, x3, text3_y, w3, h3, &r3);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
