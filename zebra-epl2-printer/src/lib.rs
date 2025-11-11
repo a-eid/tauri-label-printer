@@ -162,7 +162,7 @@ pub fn build_four_product_label(
     
     let text4_y = quad3_center_y - (h4 + HEIGHT + 8) / 2;  // Center in bottom-right (same row)
     let bc4_y = text4_y + h4 + 3;    // Barcode centering within each quadrant
-    let bc_left_x = center_x_for_ean13_column(quad_w - gap/2, NARROW);           // Center in left quadrants
+    let bc_left_x = center_x_for_ean13_column(quad_w - gap/2, NARROW) + 4;       // Center in left quadrants + 4px shift
     let bc_right_x = quad_w + gap/2 + center_x_for_ean13_column(quad_w - gap/2, NARROW); // Center in right quadrants
 
     let mut buf = Vec::<u8>::new();
