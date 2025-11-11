@@ -121,8 +121,40 @@ pub fn build_four_product_label_with_brand(
     let bc4 = ensure_valid_ean13(barcode4);
     
 
-    // Render brand (bold, moderate size)
-    let brand_img = render_arabic_line_tight_1bit(brand, font_bytes, 24.0, 1, true);
+    // Render brand (extra bold, large size)
+    let brand_img = render_arabic_line_tight_1bit(brand, font_bytes, 40.0, 2, true);
+    // Triple-draw for extra boldness
+    let brand_img = {
+        let font = rusttype::Font::try_from_bytes(font_bytes).expect("bad font");
+        let reshaper = ar_reshaper::ArabicReshaper::new(ar_reshaper::ReshaperConfig::default());
+        let visual = bidi_then_shape(brand, &reshaper);
+        let scale = rusttype::Scale { x: 40.0, y: 40.0 };
+        let vm = font.v_metrics(scale);
+        let ascent = vm.ascent.ceil();
+        let descent = vm.descent.floor();
+        let line_h = (ascent - descent).ceil().max(30.0) as u32;
+        let glyphs: Vec<_> = font.layout(&visual, scale, rusttype::point(0.0, ascent)).collect();
+        let text_w = glyphs.iter().rev()
+            .find_map(|g| g.pixel_bounding_box().map(|bb| bb.max.x as f32))
+            .unwrap_or(0.0).ceil() as u32;
+        let w = (text_w + 4).max(2);
+        let mut img = image::ImageBuffer::from_pixel(w, line_h, Luma([255]));
+        let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0)];
+        for (dx, dy) in passes {
+            for g in font.layout(&visual, scale, rusttype::point(2.0 + *dx as f32, ascent + *dy as f32)) {
+                if let Some(bb) = g.pixel_bounding_box() {
+                    g.draw(|x, y, v| {
+                        if v > 0.65 {
+                            let px = x + bb.min.x as u32;
+                            let py = y + bb.min.y as u32;
+                            if px < w && py < line_h { img.put_pixel(px, py, Luma([0])); }
+                        }
+                    });
+                }
+            }
+        }
+        img
+    };
     let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
 
     // Render product lines
