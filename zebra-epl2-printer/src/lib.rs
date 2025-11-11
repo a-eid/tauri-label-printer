@@ -64,12 +64,12 @@ pub fn build_two_product_label_with_brand(
             .unwrap_or(0.0).ceil() as u32;
         let w = (text_w + 4).max(2);
         let mut img = image::ImageBuffer::from_pixel(w, line_h, Luma([255]));
-        let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0)];
+        let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0),(0,1)]; // quad-draw for extra boldness
         for (dx, dy) in passes {
             for g in font.layout(&visual, scale, rusttype::point(2.0 + *dx as f32, ascent + *dy as f32)) {
                 if let Some(bb) = g.pixel_bounding_box() {
                     g.draw(|x, y, v| {
-                        if v > 0.65 {
+                        if v > 0.5 { // Lower threshold for crisper rendering (was 0.65)
                             let px = x + bb.min.x as u32;
                             let py = y + bb.min.y as u32;
                             if px < w && py < line_h { img.put_pixel(px, py, Luma([0])); }
@@ -161,7 +161,7 @@ pub fn build_four_product_label_with_brand(
 
     // Render brand (extra bold, large size)
     let brand_img = render_arabic_line_tight_1bit(brand, font_bytes, 40.0, 2, true);
-    // Triple-draw for extra boldness
+    // Quad-draw for extra boldness
     let brand_img = {
         let font = rusttype::Font::try_from_bytes(font_bytes).expect("bad font");
         let reshaper = ar_reshaper::ArabicReshaper::new(ar_reshaper::ReshaperConfig::default());
@@ -177,12 +177,12 @@ pub fn build_four_product_label_with_brand(
             .unwrap_or(0.0).ceil() as u32;
         let w = (text_w + 4).max(2);
         let mut img = image::ImageBuffer::from_pixel(w, line_h, Luma([255]));
-        let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0)];
+        let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0),(0,1)]; // quad-draw for extra boldness
         for (dx, dy) in passes {
             for g in font.layout(&visual, scale, rusttype::point(2.0 + *dx as f32, ascent + *dy as f32)) {
                 if let Some(bb) = g.pixel_bounding_box() {
                     g.draw(|x, y, v| {
-                        if v > 0.65 {
+                        if v > 0.5 { // Lower threshold for crisper rendering (was 0.65)
                             let px = x + bb.min.x as u32;
                             let py = y + bb.min.y as u32;
                             if px < w && py < line_h { img.put_pixel(px, py, Luma([0])); }
@@ -340,7 +340,7 @@ fn render_arabic_line_tight_1bit(
         for g in font.layout(&visual, scale, point(pad_lr as f32 + *dx as f32, ascent + *dy as f32)) {
             if let Some(bb) = g.pixel_bounding_box() {
                 g.draw(|x, y, v| {
-                    if v > 0.65 {
+                    if v > 0.5 { // Lower threshold for crisper rendering (was 0.65)
                         let px = x + bb.min.x as u32;
                         let py = y + bb.min.y as u32;
                         if px < w && py < line_h { img.put_pixel(px, py, Luma([0])); }

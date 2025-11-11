@@ -6,6 +6,7 @@ export default function App() {
 		// For 2-product labels
 		await invoke("print_label", {
 			printer: "Zebra LP2824",
+			title: "أسواق ابوعمر",
 			products: [
 				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
 				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
@@ -17,6 +18,7 @@ export default function App() {
 		// For 4-product labels (2x2 grid)
 		await invoke("print_label", {
 			printer: "Zebra LP2824",
+			title: "أسواق ابوعمر",
 			products: [
 				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
 				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
