@@ -333,7 +333,8 @@ fn render_name_price_space_between(
         .unwrap_or(0.0).ceil() as u32;
     
     let min_gap = 10; // Minimum gap between name and price
-    let available_for_name = max_width.saturating_sub(price_w + min_gap);
+    let left_padding = 5; // Left padding for price
+    let available_for_name = max_width.saturating_sub(price_w + min_gap + left_padding);
     let name_w = name_w_full.min(available_for_name);
     
     let total_w = max_width;
@@ -341,9 +342,9 @@ fn render_name_price_space_between(
     
     let passes: &[(i32,i32)] = if bold { &[(0,0),(1,0)] } else { &[(0,0)] };
     
-    // Draw price on the left (x=0)
+    // Draw price on the left with 5px padding (x=5)
     for (dx, dy) in passes {
-        for g in font.layout(&price_visual, scale, point(*dx as f32, ascent + *dy as f32)) {
+        for g in font.layout(&price_visual, scale, point(left_padding as f32 + *dx as f32, ascent + *dy as f32)) {
             if let Some(bb) = g.pixel_bounding_box() {
                 g.draw(|x, y, v| {
                     if v > 0.5 {
