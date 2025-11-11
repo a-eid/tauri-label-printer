@@ -1,58 +1,47 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct Product {
+    name: String,
+    price: String,
+    barcode: String,
+}
+
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
 #[tauri::command]
-fn print_two_product_label(
-    printer: String,
-    p1_name: String,
-    p1_price: String,
-    p1_barcode: String,
-    p2_name: String,
-    p2_price: String,
-    p2_barcode: String,
-) -> Result<(), String> {
+fn print_label(printer: String, products: Vec<Product>) -> Result<(), String> {
     // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let data = zebra_epl2_printer::build_two_product_label(
-        font,
-        &p1_name,
-        &p1_price,
-        &p1_barcode,
-        &p2_name,
-        &p2_price,
-        &p2_barcode,
-    );
-    send_to_printer_cross_os(&printer, &data)
-}
-
-#[tauri::command]
-fn print_four_product_label(
-    printer: String,
-    p1_name: String,
-    p1_price: String,
-    p1_barcode: String,
-    p2_name: String,
-    p2_price: String,
-    p2_barcode: String,
-    p3_name: String,
-    p3_price: String,
-    p3_barcode: String,
-    p4_name: String,
-    p4_price: String,
-    p4_barcode: String,
-) -> Result<(), String> {
-    // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
-    let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let data = zebra_epl2_printer::build_four_product_label(
-        font,
-        &p1_name, &p1_price, &p1_barcode,
-        &p2_name, &p2_price, &p2_barcode,
-        &p3_name, &p3_price, &p3_barcode,
-        &p4_name, &p4_price, &p4_barcode,
-    );
+    
+    let data = match products.len() {
+        2 => {
+            // Print 2 products in vertical layout
+            zebra_epl2_printer::build_two_product_label(
+                font,
+                &products[0].name, &products[0].price, &products[0].barcode,
+                &products[1].name, &products[1].price, &products[1].barcode,
+            )
+        },
+        4 => {
+            // Print 4 products in 2x2 grid layout
+            zebra_epl2_printer::build_four_product_label(
+                font,
+                &products[0].name, &products[0].price, &products[0].barcode,
+                &products[1].name, &products[1].price, &products[1].barcode,
+                &products[2].name, &products[2].price, &products[2].barcode,
+                &products[3].name, &products[3].price, &products[3].barcode,
+            )
+        },
+        _ => {
+            return Err(format!("Invalid number of products: {}. Expected 2 or 4.", products.len()));
+        }
+    };
+    
     send_to_printer_cross_os(&printer, &data)
 }
 
@@ -79,7 +68,7 @@ fn print_sample_label() -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, print_two_product_label, print_four_product_label, print_sample_label])
+        .invoke_handler(tauri::generate_handler![greet, print_label, print_sample_label])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }// Cross-OS printer sink: real spool on Windows, temp file elsewhere

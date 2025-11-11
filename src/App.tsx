@@ -4,32 +4,25 @@ import "./App.css";
 export default function App() {
 	const handlePrint2 = async () => {
 		// For 2-product labels
-		await invoke("print_two_product_label", {
+		await invoke("print_label", {
 			printer: "Zebra LP2824",
-			p1_name: "عصير برتقال",
-			p1_price: "5.00",
-			p1_barcode: "622300123456",
-			p2_name: "مياه معدنية",
-			p2_price: "3.50",
-			p2_barcode: "622300654321",
+			products: [
+				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
+				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
+			],
 		});
 	};
+
 	const handlePrint4 = async () => {
 		// For 4-product labels (2x2 grid)
-		await invoke("print_four_product_label", {
+		await invoke("print_label", {
 			printer: "Zebra LP2824",
-			p1_name: "منتج ١",
-			p1_price: "5.00",
-			p1_barcode: "622300123456",
-			p2_name: "منتج ٢",
-			p2_price: "3.50",
-			p2_barcode: "622300654321",
-			p3_name: "منتج ٣",
-			p3_price: "7.25",
-			p3_barcode: "622300789012",
-			p4_name: "منتج ٤",
-			p4_price: "2.75",
-			p4_barcode: "622300345678",
+			products: [
+				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
+				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
+				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
+				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
+			],
 		});
 	};
 
