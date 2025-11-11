@@ -20,7 +20,7 @@ fn print_label(printer: String, brand_name: String, products: Vec<Product>) -> R
     
     let data = match products.len() {
         2 => {
-            // Print 2 products in vertical layout
+            // Print 2 products in vertical layout (ignore brand_name for 2-product)
             zebra_epl2_printer::build_two_product_label(
                 font,
                 &products[0].name, &products[0].price, &products[0].barcode,
@@ -28,7 +28,7 @@ fn print_label(printer: String, brand_name: String, products: Vec<Product>) -> R
             )
         },
         4 => {
-            // Print 4 products in 2x2 grid layout
+            // Print 4 products in 2x2 grid layout (use brand_name)
             zebra_epl2_printer::build_four_product_label(
                 font,
                 &brand_name,

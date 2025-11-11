@@ -3,29 +3,41 @@ import "./App.css";
 
 export default function App() {
 	const handlePrint2 = async () => {
-		// For 2-product labels
-		await invoke("print_label", {
-			printer: "Zebra LP2824",
-			brand_name: "اسواق ابوعمر",
-			products: [
-				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
-				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
-			],
-		});
+		try {
+			console.log("Attempting to print 2 products...");
+			// For 2-product labels
+			await invoke("print_label", {
+				printer: "Zebra LP2824",
+				brand_name: "اسواق ابوعمر",
+				products: [
+					{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
+					{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
+				],
+			});
+			console.log("2-product print completed successfully!");
+		} catch (error) {
+			console.error("2-product print failed:", error);
+		}
 	};
 
 	const handlePrint4 = async () => {
-		// For 4-product labels (2x2 grid)
-		await invoke("print_label", {
-			printer: "Zebra LP2824",
-			brand_name: "اسواق ابوعمر",
-			products: [
-				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
-				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
-				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
-				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
-			],
-		});
+		try {
+			console.log("Attempting to print 4 products...");
+			// For 4-product labels (2x2 grid)
+			await invoke("print_label", {
+				printer: "Zebra LP2824",
+				brand_name: "اسواق ابوعمر",
+				products: [
+					{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
+					{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
+					{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
+					{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
+				],
+			});
+			console.log("4-product print completed successfully!");
+		} catch (error) {
+			console.error("4-product print failed:", error);
+		}
 	};
 
 	return (
