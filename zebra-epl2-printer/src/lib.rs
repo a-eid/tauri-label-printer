@@ -109,9 +109,32 @@ pub fn build_four_product_label(
     name3: &str, price3: &str, barcode3: &str,
     name4: &str, price4: &str, barcode4: &str,
 ) -> Vec<u8> {
-    // Render brand name (smaller font, bold for emphasis)
-    let brand_img = render_arabic_line_tight_1bit(brand_name, font_bytes, 24.0, 1, true);
-    let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
+    // Equal quadrants: 440÷2=220 width, 320÷2=160 height per quadrant
+    let quad_w = LABEL_W / 2;  // 220 dots per column
+    let quad_h = LABEL_H / 2;  // 160 dots per row
+    let gap = 4;               // Small gap between quadrants
+    let grid_offset_y = 20;    // Move entire grid down by 20 pixels
+
+    // Render brand name (smaller font, bold for emphasis). If empty, skip.
+    let mut brand_present = !brand_name.trim().is_empty();
+    let mut brand_px: f32 = 24.0;
+    let (mut brand_w, mut brand_h, mut brand_r) = if brand_present {
+        let img = render_arabic_line_tight_1bit(brand_name, font_bytes, brand_px, 1, true);
+        image_to_row_bytes(&img)
+    } else { (0, 0, Vec::new()) };
+
+    // If brand is wider than the quadrant, progressively scale down to fit to avoid GW out-of-bounds
+    if brand_present {
+        let max_brand_w = quad_w.saturating_sub(gap).saturating_sub(8);
+        while brand_w > max_brand_w && brand_px > 12.0 {
+            brand_px -= 2.0;
+            let img = render_arabic_line_tight_1bit(brand_name, font_bytes, brand_px, 1, true);
+            let dims = image_to_row_bytes(&img);
+            brand_w = dims.0; brand_h = dims.1; brand_r = dims.2;
+        }
+        // If still too wide, as a last resort, mark as absent to preserve legacy behavior
+        if brand_w > max_brand_w { brand_present = false; }
+    }
     
     // Compose Arabic lines with currency "ج.م"
     let t1 = format!("{}  {} {}", name1, price1, "ج.م");
@@ -136,34 +159,34 @@ pub fn build_four_product_label(
     let (w3,h3,r3) = image_to_row_bytes(&im3);
     let (w4,h4,r4) = image_to_row_bytes(&im4);
 
-    // Equal quadrants: 440÷2=220 width, 320÷2=160 height per quadrant
-    let quad_w = LABEL_W / 2;  // 220 dots per column
-    let quad_h = LABEL_H / 2;  // 160 dots per row
-    let gap = 4;               // Small gap between quadrants
-    let grid_offset_y = 20;    // Move entire grid down by 20 pixels
-    
     // Quadrant boundaries with gap:
     // Left column: 0 to (220-gap/2), Right column: (220+gap/2) to 440
     // Top row: grid_offset_y to (160-gap/2+offset), Bottom row: (160+gap/2+offset) to 320
     
-    // Center text horizontally within each quadrant
-    let x1 = (quad_w - gap/2 - w1) / 2;                    // Center product text in top-left quadrant
-    let x2 = quad_w + gap/2 + (quad_w - w2) / 2;           // Center product text in top-right quadrant  
-    let x3 = (quad_w - gap/2 - w3) / 2;                    // Center product text in bottom-left quadrant
-    let x4 = quad_w + gap/2 + (quad_w - w4) / 2;           // Center product text in bottom-right quadrant
-    
+    // Center text horizontally within each quadrant (safe centering)
+    let left_region_w = quad_w.saturating_sub(gap/2);
+    let x1 = center_x_in_region_saturating(w1, 0, left_region_w);
+    let x3 = center_x_in_region_saturating(w3, 0, left_region_w);
+    let x2 = quad_w + gap/2 + center_x_in_region_saturating(w2, 0, quad_w);
+    let x4 = quad_w + gap/2 + center_x_in_region_saturating(w4, 0, quad_w);
+
     // Center brand name horizontally within each quadrant
-    let brand_x1 = (quad_w - gap/2 - brand_w) / 2;                    // Center brand in top-left
-    let brand_x2 = quad_w + gap/2 + (quad_w - brand_w) / 2;           // Center brand in top-right
-    let brand_x3 = (quad_w - gap/2 - brand_w) / 2;                    // Center brand in bottom-left  
-    let brand_x4 = quad_w + gap/2 + (quad_w - brand_w) / 2;           // Center brand in bottom-right
+    let brand_x1 = center_x_in_region_saturating(brand_w, 0, left_region_w);
+    let brand_x3 = center_x_in_region_saturating(brand_w, 0, left_region_w);
+    let brand_x2 = quad_w + gap/2 + center_x_in_region_saturating(brand_w, 0, quad_w);
+    let brand_x4 = quad_w + gap/2 + center_x_in_region_saturating(brand_w, 0, quad_w);
     
     // Position content with brand at top, then product info, then barcode
     let brand_y_offset = grid_offset_y + 8;                           // Brand near top of each cell
-    let brand1_y = brand_y_offset;                                     // Top row brand
+    let brand1_y = brand_y_offset;                                    // Top row brand
     let brand3_y = brand_y_offset + quad_h + gap/2;                   // Bottom row brand
-    
-    let content_start_y = brand_y_offset + brand_h + 8;              // Start content after brand
+
+    // If brand is not present, keep legacy vertical alignment
+    let content_start_y = if brand_present {
+        brand_y_offset + brand_h + 8
+    } else {
+        grid_offset_y + 5
+    };                                                                // Start content after brand
     let quad1_content_y = content_start_y;                           // Top row content area
     let quad3_content_y = content_start_y + quad_h + gap/2;          // Bottom row content area
     
@@ -189,11 +212,13 @@ pub fn build_four_product_label(
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
-    // Brand names at top of each quadrant
-    gw_bytes(&mut buf, brand_x1, brand1_y, brand_w, brand_h, &brand_r);  // Top-left brand
-    gw_bytes(&mut buf, brand_x2, brand1_y, brand_w, brand_h, &brand_r);  // Top-right brand
-    gw_bytes(&mut buf, brand_x3, brand3_y, brand_w, brand_h, &brand_r);  // Bottom-left brand
-    gw_bytes(&mut buf, brand_x4, brand3_y, brand_w, brand_h, &brand_r);  // Bottom-right brand
+    // Brand names at top of each quadrant (optional)
+    if brand_present {
+        gw_bytes(&mut buf, brand_x1, brand1_y, brand_w, brand_h, &brand_r);  // Top-left brand
+        gw_bytes(&mut buf, brand_x2, brand1_y, brand_w, brand_h, &brand_r);  // Top-right brand
+        gw_bytes(&mut buf, brand_x3, brand3_y, brand_w, brand_h, &brand_r);  // Bottom-left brand
+        gw_bytes(&mut buf, brand_x4, brand3_y, brand_w, brand_h, &brand_r);  // Bottom-right brand
+    }
 
     // Top row: Product 1 (left) and Product 2 (right)
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
@@ -345,6 +370,14 @@ fn center_x_for_ean13_single(label_w: u32, narrow: u32) -> u32 {
 fn center_x_for_ean13_column(column_w: u32, narrow: u32) -> u32 {
     let w = 95 * narrow; // EAN-13 total width (95 modules)
     (column_w - w) / 2
+}
+
+/// Center an element of width `w` within a region starting at `region_left` with width `region_w`.
+/// Uses saturating math to avoid underflow/overflow and clamps to region bounds.
+fn center_x_in_region_saturating(w: u32, region_left: u32, region_w: u32) -> u32 {
+    if w >= region_w { return region_left; }
+    let space = region_w - w;
+    region_left.saturating_add(space / 2)
 }
 
 fn draw_solid_line(buf: &mut Vec<u8>, start_x: u32, y: u32, width: u32) {
