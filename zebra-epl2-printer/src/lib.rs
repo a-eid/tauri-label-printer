@@ -102,12 +102,12 @@ pub fn build_two_product_label_with_brand(
     let x2 = (LABEL_W - w2) / 2;
 
     // Move content down to make space for brand, but reduce gap
-    let brand_to_text_gap = -6; // further tighten: negative gap pulls product info closer to brand
-    let row_gap = 4; // 4px between the two rows
-    let text1_y = brand_y1 + brand_h + brand_to_text_gap;
-    let bc1_y = text1_y + h1 + 8;
-    let text2_y = brand_y2 + brand_h + brand_to_text_gap + row_gap;
-    let bc2_y = text2_y + h2 + 8;
+    let brand_to_text_gap: i32 = -6; // further tighten: negative gap pulls product info closer to brand
+    let row_gap: i32 = 4; // 4px between the two rows
+    let text1_y = (brand_y1 as i32 + brand_h as i32 + brand_to_text_gap).max(0) as u32;
+    let bc1_y = (text1_y as i32 + h1 as i32 + 8).max(0) as u32;
+    let text2_y = (brand_y2 as i32 + brand_h as i32 + brand_to_text_gap + row_gap).max(0) as u32;
+    let bc2_y = (text2_y as i32 + h2 as i32 + 8).max(0) as u32;
 
     let bx_center = center_x_for_ean13_single(LABEL_W, NARROW);
 
