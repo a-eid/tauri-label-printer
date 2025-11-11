@@ -148,10 +148,6 @@ pub fn build_four_product_label(
     let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 7;
     let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 7;
 
-    // Calculate actual content height to prevent extra label advance
-    let max_content_y = bc4_y + HEIGHT + 20;  // Bottom barcode + height + padding
-    let actual_label_h = max_content_y.min(LABEL_H);  // Don't exceed label bounds
-
     let mut buf = Vec::<u8>::new();
     epl_line(&mut buf, "N");
     epl_line(&mut buf, &format!("q{}", LABEL_W));
@@ -184,7 +180,6 @@ pub fn build_four_product_label(
     // draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
-    epl_line(&mut buf, "");    // Send empty line to flush buffer
     buf
 }
 
