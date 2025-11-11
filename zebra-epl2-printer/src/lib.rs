@@ -83,16 +83,17 @@ pub fn build_four_product_label(
     let (w3,h3,r3) = image_to_row_bytes(&im3);
     let (w4,h4,r4) = image_to_row_bytes(&im4);
 
-    // 2x2 grid layout calculations
+    // 2x2 grid layout calculations with column spacing
     let half_w = LABEL_W / 2;        // 220 dots per column
     let half_h = LABEL_H / 2;        // 160 dots per row
     let pad = 5;
+    let column_gap = 8;              // Gap between left and right columns
     
-    // Quadrant positions (text right-aligned in each half)
-    let x1 = half_w - pad - w1;      // Top-left text
-    let x2 = LABEL_W - pad - w2;     // Top-right text  
-    let x3 = half_w - pad - w3;      // Bottom-left text
-    let x4 = LABEL_W - pad - w4;     // Bottom-right text
+    // Quadrant positions (text right-aligned in each half with gap)
+    let x1 = half_w - column_gap/2 - pad - w1;      // Top-left text
+    let x2 = half_w + column_gap/2 + LABEL_W/2 - pad - w2;     // Top-right text  
+    let x3 = half_w - column_gap/2 - pad - w3;      // Bottom-left text
+    let x4 = half_w + column_gap/2 + LABEL_W/2 - pad - w4;     // Bottom-right text
     
     // Y positions for each row
     let text1_y = 8;
@@ -106,9 +107,9 @@ pub fn build_four_product_label(
     let text4_y = text3_y; 
     let bc4_y = bc3_y;
 
-    // Barcode centering for each column
-    let bc_left_x = center_x_for_ean13_column(half_w, NARROW);
-    let bc_right_x = half_w + center_x_for_ean13_column(half_w, NARROW);
+    // Barcode centering for each column with gap
+    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW);
+    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW);
 
     let mut buf = Vec::<u8>::new();
     epl_line(&mut buf, "N");  
@@ -139,10 +140,11 @@ pub fn build_four_product_label(
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bc_right_x, bc4_y, NARROW, 3, HEIGHT, bc4));
 
-    // Vertical separator line
-    draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
+    // Remove vertical separator - just use column spacing
+    // draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
+    buf.extend_from_slice(b"\x1A");  // Add SUB character to properly terminate job
     buf
 }
 
