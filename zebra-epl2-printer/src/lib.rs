@@ -40,10 +40,6 @@ pub fn build_two_product_label_with_brand(
     name1: &str, price1: &str, barcode1: &str,
     name2: &str, price2: &str, barcode2: &str,
 ) -> Vec<u8> {
-    // Compose Arabic lines with currency "ج.م"
-    let t1 = format!("{}  {} {}", name1, price1, "ج.م");
-    let t2 = format!("{}  {} {}", name2, price2, "ج.م");
-
     // Ensure barcodes are valid EAN-13 format
     let bc1 = ensure_valid_ean13(barcode1);
     let bc2 = ensure_valid_ean13(barcode2);
@@ -82,11 +78,10 @@ pub fn build_two_product_label_with_brand(
     };
     let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
 
-    // Render product lines (centered)
-    let im1 = render_arabic_line_tight_1bit(&t1, font_bytes, 52.0, 3, BOLD_STROKE);
-    let im2 = render_arabic_line_tight_1bit(&t2, font_bytes, 52.0, 3, BOLD_STROKE);
-    let (w1,h1,r1) = image_to_row_bytes(&im1);
-    let (w2,h2,r2) = image_to_row_bytes(&im2);
+    // Render product lines with space-between layout (name right, price left)
+    let max_product_width = LABEL_W - 20; // Leave some padding
+    let (w1, h1, r1) = render_name_price_space_between(name1, price1, font_bytes, 52.0, max_product_width, BOLD_STROKE);
+    let (w2, h2, r2) = render_name_price_space_between(name2, price2, font_bytes, 52.0, max_product_width, BOLD_STROKE);
 
     // Layout: two vertical halves
     let half_h = LABEL_H / 2;  // 160 dots per half
@@ -146,12 +141,6 @@ pub fn build_four_product_label_with_brand(
     name3: &str, price3: &str, barcode3: &str,
     name4: &str, price4: &str, barcode4: &str,
 ) -> Vec<u8> {
-    // Compose Arabic lines with currency "ج.م"
-    let t1 = format!("{}  {} {}", name1, price1, "ج.م");
-    let t2 = format!("{}  {} {}", name2, price2, "ج.م");
-    let t3 = format!("{}  {} {}", name3, price3, "ج.م");
-    let t4 = format!("{}  {} {}", name4, price4, "ج.م");
-
     // Ensure barcodes are valid EAN-13 format
     let bc1 = ensure_valid_ean13(barcode1);
     let bc2 = ensure_valid_ean13(barcode2);
@@ -195,22 +184,18 @@ pub fn build_four_product_label_with_brand(
     };
     let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
 
-    // Render product lines
-    let im1 = render_arabic_line_tight_1bit(&t1, font_bytes, FONT_PX, 2, BOLD_STROKE);
-    let im2 = render_arabic_line_tight_1bit(&t2, font_bytes, FONT_PX, 2, BOLD_STROKE);
-    let im3 = render_arabic_line_tight_1bit(&t3, font_bytes, FONT_PX, 2, BOLD_STROKE);
-    let im4 = render_arabic_line_tight_1bit(&t4, font_bytes, FONT_PX, 2, BOLD_STROKE);
-
-    let (w1,h1,r1) = image_to_row_bytes(&im1);
-    let (w2,h2,r2) = image_to_row_bytes(&im2);
-    let (w3,h3,r3) = image_to_row_bytes(&im3);
-    let (w4,h4,r4) = image_to_row_bytes(&im4);
-
     // Equal quadrants: 440÷2=220 width, 320÷2=160 height per quadrant
     let quad_w = LABEL_W / 2;  // 220 dots per column
     let quad_h = LABEL_H / 2;  // 160 dots per row
     let gap: i32 = -2;         // Horizontal gap between quadrants (negative to overlap slightly, reducing space by 6px from original 4)
     let grid_offset_y = 18;    // Move entire grid down (shifted up by 2px from 20)
+    
+    // Render product lines with space-between layout (name right, price left)
+    let max_product_width = ((quad_w as i32 - gap/2 - 10).max(0)) as u32; // Quadrant width minus padding
+    let (w1, h1, r1) = render_name_price_space_between(name1, price1, font_bytes, FONT_PX, max_product_width, BOLD_STROKE);
+    let (w2, h2, r2) = render_name_price_space_between(name2, price2, font_bytes, FONT_PX, max_product_width, BOLD_STROKE);
+    let (w3, h3, r3) = render_name_price_space_between(name3, price3, font_bytes, FONT_PX, max_product_width, BOLD_STROKE);
+    let (w4, h4, r4) = render_name_price_space_between(name4, price4, font_bytes, FONT_PX, max_product_width, BOLD_STROKE);
     
     // Quadrant boundaries with gap:
     // Left column: 0 to (220-gap/2), Right column: (220+gap/2) to 440
@@ -306,6 +291,88 @@ fn bidi_then_shape(text: &str, reshaper: &ArabicReshaper) -> String {
         }
     }
     out
+}
+
+/// Render name (right-aligned) and price (left-aligned) in a space-between layout.
+/// Returns (width, height, row_bytes) for the combined image.
+/// Price gets priority - if name is too long, it will be truncated.
+fn render_name_price_space_between(
+    name: &str,
+    price: &str,
+    font_bytes: &[u8],
+    font_px: f32,
+    max_width: u32,
+    bold: bool,
+) -> (u32, u32, Vec<u8>) {
+    let font = Font::try_from_bytes(font_bytes).expect("bad font");
+    let reshaper = ArabicReshaper::new(ReshaperConfig::default());
+    
+    // Render price with currency (left side in final output, but right in Arabic)
+    let price_text = format!("{} {}", price, "ج.م");
+    let price_visual = bidi_then_shape(&price_text, &reshaper);
+    
+    // Render name (right side in final output, but left in Arabic)
+    let name_visual = bidi_then_shape(name, &reshaper);
+    
+    let scale = Scale { x: font_px, y: font_px };
+    let vm = font.v_metrics(scale);
+    let ascent = vm.ascent.ceil();
+    let descent = vm.descent.floor();
+    let line_h = (ascent - descent).ceil().max(30.0) as u32;
+    
+    // Measure price width (always full)
+    let price_glyphs: Vec<_> = font.layout(&price_visual, scale, point(0.0, ascent)).collect();
+    let price_w = price_glyphs.iter().rev()
+        .find_map(|g| g.pixel_bounding_box().map(|bb| bb.max.x as f32))
+        .unwrap_or(0.0).ceil() as u32;
+    
+    // Measure name width
+    let name_glyphs: Vec<_> = font.layout(&name_visual, scale, point(0.0, ascent)).collect();
+    let name_w_full = name_glyphs.iter().rev()
+        .find_map(|g| g.pixel_bounding_box().map(|bb| bb.max.x as f32))
+        .unwrap_or(0.0).ceil() as u32;
+    
+    let min_gap = 10; // Minimum gap between name and price
+    let available_for_name = max_width.saturating_sub(price_w + min_gap);
+    let name_w = name_w_full.min(available_for_name);
+    
+    let total_w = max_width;
+    let mut img = ImageBuffer::from_pixel(total_w, line_h, Luma([255]));
+    
+    let passes: &[(i32,i32)] = if bold { &[(0,0),(1,0)] } else { &[(0,0)] };
+    
+    // Draw price on the left (x=0)
+    for (dx, dy) in passes {
+        for g in font.layout(&price_visual, scale, point(*dx as f32, ascent + *dy as f32)) {
+            if let Some(bb) = g.pixel_bounding_box() {
+                g.draw(|x, y, v| {
+                    if v > 0.5 {
+                        let px = x + bb.min.x as u32;
+                        let py = y + bb.min.y as u32;
+                        if px < total_w && py < line_h { img.put_pixel(px, py, Luma([0])); }
+                    }
+                });
+            }
+        }
+    }
+    
+    // Draw name on the right (x = total_w - name_w)
+    let name_x = total_w - name_w;
+    for (dx, dy) in passes {
+        for g in font.layout(&name_visual, scale, point(0.0, ascent)) {
+            if let Some(bb) = g.pixel_bounding_box() {
+                g.draw(|x, y, v| {
+                    if v > 0.5 {
+                        let px = x + bb.min.x as u32 + name_x;
+                        let py = y + bb.min.y as u32;
+                        if px < total_w && py < line_h { img.put_pixel(px, py, Luma([0])); }
+                    }
+                });
+            }
+        }
+    }
+    
+    image_to_row_bytes(&img)
 }
 
 /// Render tight 1-bit Arabic line; optional 1-px stroke for bold.

@@ -20,7 +20,7 @@ export default function App() {
 			printer: "Zebra LP2824",
 			title: "أسواق ابوعمر",
 			products: [
-				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
+				{ name: "عصير برتقال عصير برتقال", price: "5.00", barcode: "622300123456" },
 				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
 				{ name: "عصير برتقال", price: "5.00", barcode: "622300123456" },
 				{ name: "مياه معدنية", price: "3.50", barcode: "622300654321" },
