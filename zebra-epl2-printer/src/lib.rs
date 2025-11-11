@@ -34,8 +34,9 @@ const INVERT_BITS: bool = true;      // Invert GW bits for black-on-white
 /// - `font_bytes`: embedded Arabic font bytes 
 /// - `name1/price1/barcode1` + `name2/price2/barcode2`
 /// Returns raw bytes ready to send to the printer (USB raw write).
-pub fn build_two_product_label(
+pub fn build_two_product_label_with_brand(
     font_bytes: &[u8],
+    brand: &str,
     name1: &str, price1: &str, barcode1: &str,
     name2: &str, price2: &str, barcode2: &str,
 ) -> Vec<u8> {
@@ -47,34 +48,65 @@ pub fn build_two_product_label(
     let bc1 = ensure_valid_ean13(barcode1);
     let bc2 = ensure_valid_ean13(barcode2);
 
-    // Render Arabic lines
+    // Render brand (large, extra bold)
+    let brand_img = {
+        let font = rusttype::Font::try_from_bytes(font_bytes).expect("bad font");
+        let reshaper = ar_reshaper::ArabicReshaper::new(ar_reshaper::ReshaperConfig::default());
+        let visual = bidi_then_shape(brand, &reshaper);
+        let scale = rusttype::Scale { x: 40.0, y: 40.0 };
+        let vm = font.v_metrics(scale);
+        let ascent = vm.ascent.ceil();
+        let descent = vm.descent.floor();
+        let line_h = (ascent - descent).ceil().max(30.0) as u32;
+        let glyphs: Vec<_> = font.layout(&visual, scale, rusttype::point(0.0, ascent)).collect();
+        let text_w = glyphs.iter().rev()
+            .find_map(|g| g.pixel_bounding_box().map(|bb| bb.max.x as f32))
+            .unwrap_or(0.0).ceil() as u32;
+        let w = (text_w + 4).max(2);
+        let mut img = image::ImageBuffer::from_pixel(w, line_h, Luma([255]));
+        let passes: &[(i32,i32)] = &[(0,0),(1,0),(2,0)];
+        for (dx, dy) in passes {
+            for g in font.layout(&visual, scale, rusttype::point(2.0 + *dx as f32, ascent + *dy as f32)) {
+                if let Some(bb) = g.pixel_bounding_box() {
+                    g.draw(|x, y, v| {
+                        if v > 0.65 {
+                            let px = x + bb.min.x as u32;
+                            let py = y + bb.min.y as u32;
+                            if px < w && py < line_h { img.put_pixel(px, py, Luma([0])); }
+                        }
+                    });
+                }
+            }
+        }
+        img
+    };
+    let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
+
+    // Render product lines (centered)
     let im1 = render_arabic_line_tight_1bit(&t1, font_bytes, 52.0, 3, BOLD_STROKE);
     let im2 = render_arabic_line_tight_1bit(&t2, font_bytes, 52.0, 3, BOLD_STROKE);
-
     let (w1,h1,r1) = image_to_row_bytes(&im1);
     let (w2,h2,r2) = image_to_row_bytes(&im2);
 
-    // Equal vertical halves: 320 ÷ 2 = 160 dots per section
+    // Layout: two vertical halves
     let half_h = LABEL_H / 2;  // 160 dots per half
-    let pad = 10;              // Right padding
-    
-    // Right-align text in each half
-    let x1 = LABEL_W - pad - w1;
-    let x2 = LABEL_W - pad - w2;
+    let pad = 10;
 
-    // Center content vertically in each half (160 dots each)
-    // Half 1: 0 to 160, Half 2: 160 to 320
-    let section1_center_y = half_h / 2;           // ~80 (center of first half)
-    let section2_center_y = half_h + half_h / 2;  // ~240 (center of second half)
-    
-    // Position text and barcodes in center of each section
-    let text1_y = section1_center_y - (h1 + HEIGHT + 10) / 2;  // Center group in section 1
-    let bc1_y = text1_y + h1 + 5;
-    
-    let text2_y = section2_center_y - (h2 + HEIGHT + 10) / 2;  // Center group in section 2 
-    let bc2_y = text2_y + h2 + 5;
+    // Center brand horizontally in each half
+    let brand_x = (LABEL_W - brand_w) / 2;
+    let brand_y1 = 10;
+    let brand_y2 = half_h + 10;
 
-    // Center barcode X position
+    // Center product text horizontally
+    let x1 = (LABEL_W - w1) / 2;
+    let x2 = (LABEL_W - w2) / 2;
+
+    // Move content down to make space for brand
+    let text1_y = brand_y1 + brand_h + 12;
+    let bc1_y = text1_y + h1 + 8;
+    let text2_y = brand_y2 + brand_h + 12;
+    let bc2_y = text2_y + h2 + 8;
+
     let bx_center = center_x_for_ean13_single(LABEL_W, NARROW);
 
     let mut buf = Vec::new();
@@ -84,10 +116,14 @@ pub fn build_two_product_label(
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
+    // Top half
+    gw_bytes(&mut buf, brand_x, brand_y1, brand_w, brand_h, &brand_r);
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bx_center, bc1_y, NARROW, 3, HEIGHT, bc1));
 
+    // Bottom half
+    gw_bytes(&mut buf, brand_x, brand_y2, brand_w, brand_h, &brand_r);
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bx_center, bc2_y, NARROW, 3, HEIGHT, bc2));
