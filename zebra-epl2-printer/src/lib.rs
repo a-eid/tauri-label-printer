@@ -54,15 +54,25 @@ pub fn build_two_product_label(
     let (w1,h1,r1) = image_to_row_bytes(&im1);
     let (w2,h2,r2) = image_to_row_bytes(&im2);
 
-    // Right-align x = LABEL_W − PAD_RIGHT − w
-    let x1 = LABEL_W - PAD_RIGHT - w1;
-    let x2 = LABEL_W - PAD_RIGHT - w2;
+    // Equal vertical halves: 320 ÷ 2 = 160 dots per section
+    let half_h = LABEL_H / 2;  // 160 dots per half
+    let pad = 10;              // Right padding
+    
+    // Right-align text in each half
+    let x1 = LABEL_W - pad - w1;
+    let x2 = LABEL_W - pad - w2;
 
-    // Y positions (ensure HRI fits)
-    let text1_y = 8;
-    let bc1_y   = text1_y + h1 + 16;
-    let text2_y = bc1_y   + HEIGHT + 26;
-    let bc2_y   = text2_y + h2 + 16;
+    // Center content vertically in each half (160 dots each)
+    // Half 1: 0 to 160, Half 2: 160 to 320
+    let section1_center_y = half_h / 2;           // ~80 (center of first half)
+    let section2_center_y = half_h + half_h / 2;  // ~240 (center of second half)
+    
+    // Position text and barcodes in center of each section
+    let text1_y = section1_center_y - (h1 + HEIGHT + 10) / 2;  // Center group in section 1
+    let bc1_y = text1_y + h1 + 5;
+    
+    let text2_y = section2_center_y - (h2 + HEIGHT + 10) / 2;  // Center group in section 2 
+    let bc2_y = text2_y + h2 + 5;
 
     // Center barcode X position
     let bx_center = center_x_for_ean13_single(LABEL_W, NARROW);
@@ -120,33 +130,40 @@ pub fn build_four_product_label(
     let (w3,h3,r3) = image_to_row_bytes(&im3);
     let (w4,h4,r4) = image_to_row_bytes(&im4);
 
-    // 2x2 grid layout calculations with column spacing
-    let half_w = LABEL_W / 2;        // 220 dots per column
-    let half_h = LABEL_H / 2;        // 160 dots per row
-    let pad = 5;
-    let column_gap = 8;              // Gap between left and right columns
+    // Equal quadrants: 440÷2=220 width, 320÷2=160 height per quadrant
+    let quad_w = LABEL_W / 2;  // 220 dots per column
+    let quad_h = LABEL_H / 2;  // 160 dots per row
+    let pad = 8;               // Padding from edges
+    let gap = 4;               // Small gap between quadrants
     
-    // Quadrant positions (text right-aligned in each half with gap)
-    let x1 = half_w - column_gap/2 - pad - w1;      // Top-left text
-    let x2 = half_w + column_gap/2 + LABEL_W/2 - pad - w2;     // Top-right text  
-    let x3 = half_w - column_gap/2 - pad - w3;      // Bottom-left text
-    let x4 = half_w + column_gap/2 + LABEL_W/2 - pad - w4;     // Bottom-right text
+    // Quadrant boundaries with gap:
+    // Left column: 0 to (220-gap/2), Right column: (220+gap/2) to 440
+    // Top row: 0 to (160-gap/2), Bottom row: (160+gap/2) to 320
     
-    // Y positions for each row
-    let text1_y = 8;
-    let bc1_y = text1_y + h1 + 5;
-    let text3_y = half_h + 8;
-    let bc3_y = text3_y + h3 + 5;
+    // Right-align text within each quadrant
+    let x1 = quad_w - gap/2 - pad - w1;                    // Top-left quadrant
+    let x2 = quad_w + gap/2 + quad_w - pad - w2;           // Top-right quadrant  
+    let x3 = quad_w - gap/2 - pad - w3;                    // Bottom-left quadrant
+    let x4 = quad_w + gap/2 + quad_w - pad - w4;           // Bottom-right quadrant
     
-    // Same Y for right column
-    let text2_y = text1_y;
-    let bc2_y = bc1_y;
-    let text4_y = text3_y; 
-    let bc4_y = bc3_y;
-
-    // Barcode centering for each column with gap - shift right by 7 pixels for HRI numbers
-    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 7;
-    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 7;
+    // Center content vertically within each quadrant
+    let quad1_center_y = quad_h / 2;                       // ~80 (center of top row)
+    let quad3_center_y = quad_h + gap/2 + quad_h / 2;      // ~240 (center of bottom row)
+    
+    // Position text and barcodes centered in each quadrant
+    let text1_y = quad1_center_y - (h1 + HEIGHT + 8) / 2;  // Center in top-left
+    let bc1_y = text1_y + h1 + 3;
+    
+    let text2_y = quad1_center_y - (h2 + HEIGHT + 8) / 2;  // Center in top-right (same row)
+    let bc2_y = text2_y + h2 + 3;
+    
+    let text3_y = quad3_center_y - (h3 + HEIGHT + 8) / 2;  // Center in bottom-left
+    let bc3_y = text3_y + h3 + 3;
+    
+    let text4_y = quad3_center_y - (h4 + HEIGHT + 8) / 2;  // Center in bottom-right (same row)
+    let bc4_y = text4_y + h4 + 3;    // Barcode centering within each quadrant
+    let bc_left_x = center_x_for_ean13_column(quad_w - gap/2, NARROW);           // Center in left quadrants
+    let bc_right_x = quad_w + gap/2 + center_x_for_ean13_column(quad_w - gap/2, NARROW); // Center in right quadrants
 
     let mut buf = Vec::<u8>::new();
     epl_line(&mut buf, "N");
