@@ -11,6 +11,11 @@ pub fn send_raw_to_printer(printer_name: &str, data: &[u8]) -> Result<(), Box<dy
         use winapi::shared::minwindef::*;
         use winapi::shared::ntdef::LPWSTR;
         use std::ptr::null_mut;
+        use winapi::um::errhandlingapi::GetLastError;
+        use winapi::um::winbase::FormatMessageW;
+        use winapi::um::winbase::{FORMAT_MESSAGE_FROM_SYSTEM, FORMAT_MESSAGE_IGNORE_INSERTS};
+        use std::os::windows::ffi::OsStringExt;
+        use std::ffi::OsString;
 
         // convert printer name and helper strings to wide
         let wide_name: Vec<u16> = OsStr::new(printer_name).encode_wide().chain(once(0)).collect();
@@ -20,7 +25,8 @@ pub fn send_raw_to_printer(printer_name: &str, data: &[u8]) -> Result<(), Box<dy
         unsafe {
             let mut handle: *mut winapi::ctypes::c_void = null_mut();
             if OpenPrinterW(wide_name.as_ptr() as LPWSTR, &mut handle as *mut _ as *mut _, null_mut()) == 0 {
-                return Err(Box::<dyn Error>::from("OpenPrinterW failed"));
+                let msg = last_error_string();
+                return Err(format!("OpenPrinterW failed for '{}': {}", printer_name, msg).into());
             }
 
             let doc_info = DOC_INFO_1W {
@@ -31,14 +37,16 @@ pub fn send_raw_to_printer(printer_name: &str, data: &[u8]) -> Result<(), Box<dy
 
             let job = StartDocPrinterW(handle as *mut _, 1, &doc_info as *const _ as *mut _);
             if job == 0 {
+                let msg = last_error_string();
                 ClosePrinter(handle as *mut _);
-                return Err(Box::<dyn Error>::from("StartDocPrinterW failed"));
+                return Err(format!("StartDocPrinterW failed: {}", msg).into());
             }
 
             if StartPagePrinter(handle as *mut _) == 0 {
+                let msg = last_error_string();
                 EndDocPrinter(handle as *mut _);
                 ClosePrinter(handle as *mut _);
-                return Err(Box::<dyn Error>::from("StartPagePrinter failed"));
+                return Err(format!("StartPagePrinter failed: {}", msg).into());
             }
 
             let mut written: DWORD = 0;
@@ -54,7 +62,11 @@ pub fn send_raw_to_printer(printer_name: &str, data: &[u8]) -> Result<(), Box<dy
             ClosePrinter(handle as *mut _);
 
             if ok == 0 {
-                return Err(Box::<dyn Error>::from("WritePrinter failed"));
+                let msg = last_error_string();
+                return Err(format!("WritePrinter failed (wrote {} of {} bytes): {}", written, data.len(), msg).into());
+            }
+            if written as usize != data.len() {
+                return Err(format!("Partial write: wrote {} of {} bytes", written, data.len()).into());
             }
             Ok(())
         }
@@ -135,5 +147,26 @@ pub fn list_printers() -> Result<Vec<String>, Box<dyn Error>> {
     #[cfg(not(target_os = "windows"))]
     {
         Ok(Vec::new())
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn last_error_string() -> String {
+    unsafe {
+        let err = GetLastError();
+        if err == 0 { return "Unknown error".to_string(); }
+        let mut buf: [u16; 1024] = [0; 1024];
+        let len = FormatMessageW(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            std::ptr::null(),
+            err,
+            0,
+            buf.as_mut_ptr(),
+            buf.len() as u32,
+            std::ptr::null_mut(),
+        );
+        if len == 0 { return format!("OS Error {}", err); }
+        let s = OsString::from_wide(&buf[..len as usize]).to_string_lossy().to_string();
+        format!("{} (code {})", s.trim(), err)
     }
 }
