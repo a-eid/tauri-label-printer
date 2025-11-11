@@ -43,6 +43,10 @@ pub fn build_two_product_label(
     let t1 = format!("{}    {} {}", name1, price1, "ج.م");
     let t2 = format!("{}    {} {}", name2, price2, "ج.م");
 
+    // Ensure barcodes are valid EAN-13 format
+    let bc1 = ensure_valid_ean13(barcode1);
+    let bc2 = ensure_valid_ean13(barcode2);
+
     // Render tight, bold, 1-bit Arabic lines
     let mut im1 = render_arabic_line_tight_1bit(&t1, font_bytes, FONT_PX, 3, BOLD_STROKE);
     let mut im2 = render_arabic_line_tight_1bit(&t2, font_bytes, FONT_PX, 3, BOLD_STROKE);
@@ -75,16 +79,16 @@ pub fn build_two_product_label(
 
     // Always portrait mode - both products on same label
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
-    epl_line(&mut buf, &format!("B{},{},0,1A,{},{},+{},B,\"{}\"",
-        bx, bc1_y, NARROW, 4, HEIGHT, barcode1));
+    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
+        bx, bc1_y, NARROW, 4, HEIGHT, bc1));
 
     // Dotted separator line between products (after first barcode HRI)
     let separator_y = bc1_y + HEIGHT + 25;  // After HRI space
     draw_dotted_line(&mut buf, 20, separator_y, LABEL_W - 40);
 
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
-    epl_line(&mut buf, &format!("B{},{},0,1A,{},{},+{},B,\"{}\"",
-        bx, bc2_y, NARROW, 4, HEIGHT, barcode2));
+    epl_line(&mut buf, &format!("B{},{},0,1,{},{},{},B,\"{}\"",
+        bx, bc2_y, NARROW, 4, HEIGHT, bc2));
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
     buf
@@ -218,6 +222,19 @@ fn draw_dotted_line(buf: &mut Vec<u8>, start_x: u32, y: u32, width: u32) {
         // LO command: LO x,y,thickness,width
         epl_line(buf, &format!("LO{},{},1,{}", x, y, dot_length));
         x += total_pattern;
+    }
+}
+
+// Ensure barcode is valid 12-digit EAN-13 (without check digit)
+fn ensure_valid_ean13(barcode: &str) -> String {
+    let digits: String = barcode.chars().filter(|c| c.is_ascii_digit()).collect();
+    
+    if digits.len() >= 12 {
+        // Take first 12 digits (EPL2 will calculate check digit)
+        digits[..12].to_string()
+    } else {
+        // Pad with zeros to make 12 digits
+        format!("{:0<12}", digits)
     }
 }
 
