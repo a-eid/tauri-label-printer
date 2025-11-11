@@ -107,9 +107,9 @@ pub fn build_four_product_label(
     let text4_y = text3_y; 
     let bc4_y = bc3_y;
 
-    // Barcode centering for each column with gap
-    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW);
-    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW);
+    // Barcode centering for each column with gap - shift right by 2 pixels
+    let bc_left_x = center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 2;
+    let bc_right_x = half_w + column_gap/2 + center_x_for_ean13_column(half_w - column_gap/2, NARROW) + 2;
 
     let mut buf = Vec::<u8>::new();
     epl_line(&mut buf, "N");  

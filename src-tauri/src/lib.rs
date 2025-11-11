@@ -58,14 +58,12 @@ fn print_four_product_label(
 
 #[tauri::command]
 fn print_sample_label() -> Result<(), String> {
-    // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
+    // Test with the original 2-product function to see if it has the same issue
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let epl = zebra_epl2_printer::build_four_product_label(
+    let epl = zebra_epl2_printer::build_two_product_label(
         font,
         "عصير برتقال صغير", "5.00", "622300123456",
-        "مياه معدنية صغيرة", "3.50", "622300654321", 
-        "شوكولاتة داكنة", "12.00", "622300789012",
-        "قهوة عربية", "8.50", "622300345678",
+        "مياه معدنية صغيرة", "3.50", "622300654321",
     );
     // Write the generated EPL to a temp file for debugging (so you can inspect the raw job)
     if let Ok(tmp) = std::env::temp_dir().join("last_epl.bin").into_os_string().into_string() {
