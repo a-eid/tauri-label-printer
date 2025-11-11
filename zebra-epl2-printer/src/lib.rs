@@ -141,7 +141,8 @@ pub fn build_four_product_label(
     // Vertical separator line
     draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
-    epl_line(&mut buf, "P1");  // Print exactly ONE label
+    // End job without extra CRLF to prevent blank label
+    buf.extend_from_slice(b"P1");
     buf
 }
 
