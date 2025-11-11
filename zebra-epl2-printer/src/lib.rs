@@ -100,8 +100,9 @@ pub fn build_two_product_label(
 /// - `font_bytes`: embedded Arabic font bytes 
 /// - Four sets of `name/price/barcode` for each quadrant
 /// Returns raw bytes ready to send to the printer (USB raw write).
-pub fn build_four_product_label(
+pub fn build_four_product_label_with_brand(
     font_bytes: &[u8],
+    brand: &str,
     name1: &str, price1: &str, barcode1: &str,
     name2: &str, price2: &str, barcode2: &str,
     name3: &str, price3: &str, barcode3: &str,
@@ -120,7 +121,11 @@ pub fn build_four_product_label(
     let bc4 = ensure_valid_ean13(barcode4);
     
 
-    // Render smaller Arabic lines for 2x2 layout
+    // Render brand (bold, moderate size)
+    let brand_img = render_arabic_line_tight_1bit(brand, font_bytes, 24.0, 1, true);
+    let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
+
+    // Render product lines
     let im1 = render_arabic_line_tight_1bit(&t1, font_bytes, FONT_PX, 2, BOLD_STROKE);
     let im2 = render_arabic_line_tight_1bit(&t2, font_bytes, FONT_PX, 2, BOLD_STROKE);
     let im3 = render_arabic_line_tight_1bit(&t3, font_bytes, FONT_PX, 2, BOLD_STROKE);
@@ -141,28 +146,31 @@ pub fn build_four_product_label(
     // Left column: 0 to (220-gap/2), Right column: (220+gap/2) to 440
     // Top row: grid_offset_y to (160-gap/2+offset), Bottom row: (160+gap/2+offset) to 320
     
-    // Center text horizontally within each quadrant
+    // Center brand horizontally in each quadrant
+    let brand_x_left = (quad_w - gap/2 - brand_w) / 2;
+    let brand_x_right = quad_w + gap/2 + (quad_w - brand_w) / 2;
+    let brand_y_top = grid_offset_y + 4;
+    let brand_y_bottom = grid_offset_y + quad_h + gap/2 + 4;
+
+    // Center product text horizontally within each quadrant
     let x1 = (quad_w - gap/2 - w1) / 2;                    // Center in top-left quadrant
     let x2 = quad_w + gap/2 + (quad_w - w2) / 2;           // Center in top-right quadrant  
     let x3 = (quad_w - gap/2 - w3) / 2;                    // Center in bottom-left quadrant
     let x4 = quad_w + gap/2 + (quad_w - w4) / 2;           // Center in bottom-right quadrant
-    
-    // Center content vertically within each quadrant (shifted down)
-    let quad1_center_y = grid_offset_y + quad_h / 2;                       // ~100 (center of top row)
-    let quad3_center_y = grid_offset_y + quad_h + gap/2 + quad_h / 2;      // ~260 (center of bottom row)
-    
-    // Position text and barcodes centered in each quadrant
-    let text1_y = quad1_center_y - (h1 + HEIGHT + 8) / 2;  // Center in top-left
+
+    // Content vertical positions: brand at top, then product, then barcode
+    let text1_y = brand_y_top + brand_h + 6;
     let bc1_y = text1_y + h1 + 3;
-    
-    let text2_y = quad1_center_y - (h2 + HEIGHT + 8) / 2;  // Center in top-right (same row)
+
+    let text2_y = brand_y_top + brand_h + 6;
     let bc2_y = text2_y + h2 + 3;
-    
-    let text3_y = quad3_center_y - (h3 + HEIGHT + 8) / 2;  // Center in bottom-left
+
+    let text3_y = brand_y_bottom + brand_h + 6;
     let bc3_y = text3_y + h3 + 3;
-    
-    let text4_y = quad3_center_y - (h4 + HEIGHT + 8) / 2;  // Center in bottom-right (same row)
-    let bc4_y = text4_y + h4 + 3;    // Barcode centering within each quadrant
+
+    let text4_y = brand_y_bottom + brand_h + 6;
+    let bc4_y = text4_y + h4 + 3;
+
     let bc_left_x = center_x_for_ean13_column(quad_w - gap/2, NARROW) + 4;       // Center in left quadrants + 4px shift
     let bc_right_x = quad_w + gap/2 + center_x_for_ean13_column(quad_w - gap/2, NARROW); // Center in right quadrants
 
@@ -173,26 +181,25 @@ pub fn build_four_product_label(
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
-    // Top row: Product 1 (left) and Product 2 (right)
+    // Top row: Brand, Product 1 (left) and Product 2 (right)
+    gw_bytes(&mut buf, brand_x_left, brand_y_top, brand_w, brand_h, &brand_r);
+    gw_bytes(&mut buf, brand_x_right, brand_y_top, brand_w, brand_h, &brand_r);
     gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bc_left_x, bc1_y, NARROW, 3, HEIGHT, bc1));
-        
     gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bc_right_x, bc2_y, NARROW, 3, HEIGHT, bc2));
 
-    // Bottom row: Product 3 (left) and Product 4 (right)
+    // Bottom row: Brand, Product 3 (left) and Product 4 (right)
+    gw_bytes(&mut buf, brand_x_left, brand_y_bottom, brand_w, brand_h, &brand_r);
+    gw_bytes(&mut buf, brand_x_right, brand_y_bottom, brand_w, brand_h, &brand_r);
     gw_bytes(&mut buf, x3, text3_y, w3, h3, &r3);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bc_left_x, bc3_y, NARROW, 3, HEIGHT, bc3));
-        
     gw_bytes(&mut buf, x4, text4_y, w4, h4, &r4);
     epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
         bc_right_x, bc4_y, NARROW, 3, HEIGHT, bc4));
-
-    // Remove vertical separator - just use column spacing
-    // draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
     epl_line(&mut buf, "P1");  // Print exactly ONE label
     buf
