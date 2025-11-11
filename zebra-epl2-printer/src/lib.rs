@@ -102,7 +102,7 @@ pub fn build_two_product_label_with_brand(
     let x2 = (LABEL_W - w2) / 2;
 
     // Move content down to make space for brand, but reduce gap
-    let brand_to_text_gap = 0; // 12 - 12 = 0px (reduce by 12px)
+    let brand_to_text_gap = -6; // further tighten: negative gap pulls product info closer to brand
     let row_gap = 4; // 4px between the two rows
     let text1_y = brand_y1 + brand_h + brand_to_text_gap;
     let bc1_y = text1_y + h1 + 8;
