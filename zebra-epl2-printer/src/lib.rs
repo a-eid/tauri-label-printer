@@ -30,7 +30,7 @@ const INVERT_BITS: bool = true;      // Invert GW bits for black-on-white
 
 // ======== Public API ========
 
-/// Build a single EPL2 print job for two products (legacy function).
+/// Build a single EPL2 print job for two products (original working implementation).
 /// - `font_bytes`: embedded Arabic font bytes 
 /// - `name1/price1/barcode1` + `name2/price2/barcode2`
 /// Returns raw bytes ready to send to the printer (USB raw write).
@@ -39,14 +39,51 @@ pub fn build_two_product_label(
     name1: &str, price1: &str, barcode1: &str,
     name2: &str, price2: &str, barcode2: &str,
 ) -> Vec<u8> {
-    // For now, call the 4-product function with duplicate data
-    build_four_product_label(
-        font_bytes,
-        name1, price1, barcode1,
-        name2, price2, barcode2,
-        name1, price1, barcode1, // Duplicate first product
-        name2, price2, barcode2, // Duplicate second product
-    )
+    // Compose Arabic lines with currency "ج.م"
+    let t1 = format!("{}  {} {}", name1, price1, "ج.م");
+    let t2 = format!("{}  {} {}", name2, price2, "ج.م");
+
+    // Ensure barcodes are valid EAN-13 format
+    let bc1 = ensure_valid_ean13(barcode1);
+    let bc2 = ensure_valid_ean13(barcode2);
+
+    // Render Arabic lines
+    let im1 = render_arabic_line_tight_1bit(&t1, font_bytes, 52.0, 3, BOLD_STROKE);
+    let im2 = render_arabic_line_tight_1bit(&t2, font_bytes, 52.0, 3, BOLD_STROKE);
+
+    let (w1,h1,r1) = image_to_row_bytes(&im1);
+    let (w2,h2,r2) = image_to_row_bytes(&im2);
+
+    // Right-align x = LABEL_W − PAD_RIGHT − w
+    let x1 = LABEL_W - PAD_RIGHT - w1;
+    let x2 = LABEL_W - PAD_RIGHT - w2;
+
+    // Y positions (ensure HRI fits)
+    let text1_y = 8;
+    let bc1_y   = text1_y + h1 + 16;
+    let text2_y = bc1_y   + HEIGHT + 26;
+    let bc2_y   = text2_y + h2 + 16;
+
+    // Center barcode X position
+    let bx_center = center_x_for_ean13_single(LABEL_W, NARROW);
+
+    let mut buf = Vec::new();
+    epl_line(&mut buf, "N");
+    epl_line(&mut buf, &format!("q{}", LABEL_W));
+    epl_line(&mut buf, &format!("Q{},{}", LABEL_H, 24));
+    epl_line(&mut buf, &format!("D{}", DARKNESS));
+    epl_line(&mut buf, &format!("S{}", SPEED));
+
+    gw_bytes(&mut buf, x1, text1_y, w1, h1, &r1);
+    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
+        bx_center, bc1_y, NARROW, 3, HEIGHT, bc1));
+
+    gw_bytes(&mut buf, x2, text2_y, w2, h2, &r2);
+    epl_line(&mut buf, &format!("B{},{},0,E30,{},{},{},B,\"{}\"",
+        bx_center, bc2_y, NARROW, 3, HEIGHT, bc2));
+
+    epl_line(&mut buf, "P1");
+    buf
 }
 
 /// Build a single EPL2 print job for four products in 2x2 grid.
@@ -116,9 +153,9 @@ pub fn build_four_product_label(
     let actual_label_h = max_content_y.min(LABEL_H);  // Don't exceed label bounds
 
     let mut buf = Vec::<u8>::new();
-    // Use actual content height instead of full label height
+    epl_line(&mut buf, "N");
     epl_line(&mut buf, &format!("q{}", LABEL_W));
-    epl_line(&mut buf, &format!("Q{}", actual_label_h));  // Use calculated height
+    epl_line(&mut buf, &format!("Q{},{}", LABEL_H, 24));
     epl_line(&mut buf, &format!("D{}", DARKNESS));
     epl_line(&mut buf, &format!("S{}", SPEED));
 
@@ -146,8 +183,8 @@ pub fn build_four_product_label(
     // Remove vertical separator - just use column spacing
     // draw_vertical_line(&mut buf, half_w, 10, LABEL_H - 20);
 
-    epl_line(&mut buf, "P1");  // Print exactly ONE label  
-    // Remove SUB termination that might cause issues
+    epl_line(&mut buf, "P1");  // Print exactly ONE label
+    epl_line(&mut buf, "");    // Send empty line to flush buffer
     buf
 }
 
@@ -264,6 +301,11 @@ fn gw_bytes(buf:&mut Vec<u8>, x:u32, y:u32, w:u32, h:u32, rows:&[u8]) {
 // ======== Utility ========
 
 fn center_x_for_ean13(label_w: u32, narrow: u32) -> u32 {
+    let w = 95 * narrow; // EAN-13 total width (95 modules)
+    (label_w - w) / 2
+}
+
+fn center_x_for_ean13_single(label_w: u32, narrow: u32) -> u32 {
     let w = 95 * narrow; // EAN-13 total width (95 modules)
     (label_w - w) / 2
 }
