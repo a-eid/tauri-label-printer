@@ -5699,6 +5699,7 @@ dependencies = [
 [[package]]
 name = "zebra_epl2_printer"
 version = "0.1.0"
+source = "git+https://github.com/a-eid/zebra-epl2-printer#b8f655997d75c6910bbaa4111bf94f3e68759212"
 dependencies = [
  "ar-reshaper",
  "image",
