@@ -101,10 +101,12 @@ pub fn build_two_product_label_with_brand(
     let x1 = (LABEL_W - w1) / 2;
     let x2 = (LABEL_W - w2) / 2;
 
-    // Move content down to make space for brand
-    let text1_y = brand_y1 + brand_h + 12;
+    // Move content down to make space for brand, but reduce gap
+    let brand_to_text_gap = 0; // 12 - 12 = 0px (reduce by 12px)
+    let row_gap = 4; // 4px between the two rows
+    let text1_y = brand_y1 + brand_h + brand_to_text_gap;
     let bc1_y = text1_y + h1 + 8;
-    let text2_y = brand_y2 + brand_h + 12;
+    let text2_y = brand_y2 + brand_h + brand_to_text_gap + row_gap;
     let bc2_y = text2_y + h2 + 8;
 
     let bx_center = center_x_for_ean13_single(LABEL_W, NARROW);
