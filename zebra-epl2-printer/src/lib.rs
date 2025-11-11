@@ -109,8 +109,8 @@ pub fn build_four_product_label(
     name3: &str, price3: &str, barcode3: &str,
     name4: &str, price4: &str, barcode4: &str,
 ) -> Vec<u8> {
-    // Render brand name (smaller font, same for all cells)
-    let brand_img = render_arabic_line_tight_1bit(brand_name, font_bytes, 24.0, 1, false);
+    // Render brand name (smaller font, bold for emphasis)
+    let brand_img = render_arabic_line_tight_1bit(brand_name, font_bytes, 24.0, 1, true);
     let (brand_w, brand_h, brand_r) = image_to_row_bytes(&brand_img);
     
     // Compose Arabic lines with currency "ج.م"
