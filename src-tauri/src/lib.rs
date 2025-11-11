@@ -39,10 +39,11 @@ fn print_label(printer: String, brand: Option<String>, products: Vec<Product>) -
 
 #[tauri::command]
 fn print_sample_label() -> Result<(), String> {
-    // Test with the original 2-product function to see if it has the same issue
+    // Test with the new 2-product function with brand
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    let epl = zebra_epl2_printer::build_two_product_label(
+    let epl = zebra_epl2_printer::build_two_product_label_with_brand(
         font,
+        "اسواق ابو عمر",
         "عصير برتقال صغير", "5.00", "622300123456",
         "مياه معدنية صغيرة", "3.50", "622300654321",
     );

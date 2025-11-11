@@ -227,16 +227,18 @@ pub fn build_four_product_label_with_brand(
     let x4 = quad_w + gap/2 + (quad_w - w4) / 2;           // Center in bottom-right quadrant
 
     // Content vertical positions: brand at top, then product, then barcode
-    let text1_y = brand_y_top + brand_h + 6;
+    // Shift content up by 10px for better balance
+    let shift_up = 10;
+    let text1_y = brand_y_top + brand_h + 6 - shift_up;
     let bc1_y = text1_y + h1 + 3;
 
-    let text2_y = brand_y_top + brand_h + 6;
+    let text2_y = brand_y_top + brand_h + 6 - shift_up;
     let bc2_y = text2_y + h2 + 3;
 
-    let text3_y = brand_y_bottom + brand_h + 6;
+    let text3_y = brand_y_bottom + brand_h + 6 - shift_up;
     let bc3_y = text3_y + h3 + 3;
 
-    let text4_y = brand_y_bottom + brand_h + 6;
+    let text4_y = brand_y_bottom + brand_h + 6 - shift_up;
     let bc4_y = text4_y + h4 + 3;
 
     let bc_left_x = center_x_for_ean13_column(quad_w - gap/2, NARROW) + 4;       // Center in left quadrants + 4px shift
