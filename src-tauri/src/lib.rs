@@ -15,6 +15,9 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 fn print_label(printer: String, brand_name: String, products: Vec<Product>) -> Result<(), String> {
+    println!("print_label called with {} products for printer: {}", products.len(), printer);
+    println!("Brand name: {}", brand_name);
+    
     // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
     
@@ -43,7 +46,10 @@ fn print_label(printer: String, brand_name: String, products: Vec<Product>) -> R
         }
     };
     
-    send_to_printer_cross_os(&printer, &data)
+    println!("Generated EPL2 data, {} bytes", data.len());
+    let result = send_to_printer_cross_os(&printer, &data);
+    println!("Print result: {:?}", result);
+    result
 }
 
 #[tauri::command]
@@ -73,14 +79,24 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }// Cross-OS printer sink: real spool on Windows, temp file elsewhere
-fn send_to_printer_cross_os(printer: &str, data: &[u8]) -> Result<(), String> {
+fn send_to_printer_cross_os(_printer: &str, data: &[u8]) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
-        return zebra_epl2_printer::send_raw_to_printer(printer, data).map_err(|e| e.to_string());
+        return zebra_epl2_printer::send_raw_to_printer(_printer, data).map_err(|e| e.to_string());
     }
     #[cfg(not(target_os = "windows"))]
     {
         let path = std::env::temp_dir().join("last_epl.bin");
-        std::fs::write(&path, data).map_err(|e| e.to_string())
+        println!("Writing EPL2 data to temp file: {}", path.display());
+        match std::fs::write(&path, data) {
+            Ok(_) => {
+                println!("Successfully wrote {} bytes to {}", data.len(), path.display());
+                Ok(())
+            }
+            Err(e) => {
+                println!("Failed to write to temp file: {}", e);
+                Err(e.to_string())
+            }
+        }
     }
 }
