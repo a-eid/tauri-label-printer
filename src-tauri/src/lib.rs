@@ -14,34 +14,24 @@ fn greet(name: &str) -> String {
 }
 
 #[tauri::command]
-fn print_label(printer: String, products: Vec<Product>) -> Result<(), String> {
-    // include font from the app assets folder (src/assets/fonts/Amiri-Regular.ttf)
+fn print_label(printer: String, brand: Option<String>, products: Vec<Product>) -> Result<(), String> {
     let font = include_bytes!("../../src/assets/fonts/Amiri-Regular.ttf");
-    
     let data = match products.len() {
-        2 => {
-            // Print 2 products in vertical layout
-            zebra_epl2_printer::build_two_product_label(
-                font,
-                &products[0].name, &products[0].price, &products[0].barcode,
-                &products[1].name, &products[1].price, &products[1].barcode,
-            )
-        },
-        4 => {
-            // Print 4 products in 2x2 grid layout
-            zebra_epl2_printer::build_four_product_label(
-                font,
-                &products[0].name, &products[0].price, &products[0].barcode,
-                &products[1].name, &products[1].price, &products[1].barcode,
-                &products[2].name, &products[2].price, &products[2].barcode,
-                &products[3].name, &products[3].price, &products[3].barcode,
-            )
-        },
-        _ => {
-            return Err(format!("Invalid number of products: {}. Expected 2 or 4.", products.len()));
-        }
+        2 => zebra_epl2_printer::build_two_product_label(
+            font,
+            &products[0].name, &products[0].price, &products[0].barcode,
+            &products[1].name, &products[1].price, &products[1].barcode,
+        ),
+        4 => zebra_epl2_printer::build_four_product_label_with_brand(
+            font,
+            brand.as_deref().unwrap_or("اسواق ابو عمر"),
+            &products[0].name, &products[0].price, &products[0].barcode,
+            &products[1].name, &products[1].price, &products[1].barcode,
+            &products[2].name, &products[2].price, &products[2].barcode,
+            &products[3].name, &products[3].price, &products[3].barcode,
+        ),
+        _ => return Err(format!("Invalid number of products: {}. Expected 2 or 4.", products.len())),
     };
-    
     send_to_printer_cross_os(&printer, &data)
 }
 
